@@ -1,26 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { EventHeader } from "@/components/board/EventHeader";
+import { Ticker } from "@/components/board/Ticker";
+import { TeamScoreboard } from "@/components/board/TeamScoreboard";
+import { SkinsStrip } from "@/components/board/SkinsStrip";
+import { Leaderboard } from "@/components/board/Leaderboard";
+import { BottomNav } from "@/components/board/BottomNav";
 
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "The Board — Live Golf Competition" },
+      { name: "description", content: "Live leaderboards, skins, and projected payouts for golf money games and tournaments." },
+      { property: "og:title", content: "The Board — Live Golf Competition" },
+      { property: "og:description", content: "Real-time leaderboards, skins, and payout movement during the round." },
+    ],
+  }),
+  component: LiveBoardPage,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
+function LiveBoardPage() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="mx-auto min-h-screen max-w-xl pb-28">
+      <EventHeader />
+      <Ticker />
+      <div className="space-y-4 pt-4">
+        <TeamScoreboard />
+        <SkinsStrip />
+        <Leaderboard />
+      </div>
+      <BottomNav active="board" />
+    </main>
   );
-}
-
-function Index() {
-  return <PlaceholderIndex />;
 }
