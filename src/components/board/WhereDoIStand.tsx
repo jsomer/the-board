@@ -271,3 +271,16 @@ function Stat({
 }
 
 void event;
+
+function labelForScore(stroke: number, par: number): string {
+  const off = stroke - par;
+  if (stroke === 1) return "Ace";
+  if (off <= -3) return "Albatross";
+  if (off === -2) return "Eagle";
+  if (off === -1) return "Birdie";
+  if (off === 0) return "Par";
+  if (off === 1) return "Bogey";
+  if (off === 2) return "Double";
+  return `+${off}`;
+}
+
