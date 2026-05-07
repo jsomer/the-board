@@ -133,10 +133,12 @@ export function QuotaLeaderboardPage() {
           const leader = i === 0;
           const beating = r.diff > 0;
           return (
-            <li
-              key={r.player.id}
+          <li key={r.player.id}>
+            <Link
+              to="/player/$playerId"
+              params={{ playerId: r.player.id }}
               className={cn(
-                "grid grid-cols-[28px_1fr_44px_56px_52px_44px] items-center gap-2 rounded-2xl border px-2 py-2.5 transition-all",
+                "grid grid-cols-[28px_1fr_44px_56px_52px_44px] items-center gap-2 rounded-2xl border px-2 py-2.5 transition-all active:scale-[0.99] hover:border-primary/40",
                 leader
                   ? "border-transparent bg-gradient-to-r from-gold/15 via-gold/5 to-transparent shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--gold)_35%,transparent)]"
                   : "border-border bg-card",
@@ -203,6 +205,7 @@ export function QuotaLeaderboardPage() {
                   {r.skinsWon}
                 </span>
               </div>
+            </Link>
             </li>
           );
         })}
