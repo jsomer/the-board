@@ -313,7 +313,7 @@ function HoleCell({ h }: { h: HoleRow }) {
         ? "border-border bg-card text-foreground"
         : "border-down/25 bg-down/5 text-down";
   return (
-    <div className={cn("relative flex flex-col items-center rounded-lg border px-1 py-1.5", tone)}>
+    <div id={`hole-${h.hole}`} className={cn("relative flex flex-col items-center rounded-lg border px-1 py-1.5 scroll-mt-24", tone)}>
       <span className="text-[8px] font-bold uppercase tracking-wider opacity-70">H{h.hole}</span>
       <span className="font-tabular text-sm font-extrabold leading-none">
         {played ? h.score : "—"}
