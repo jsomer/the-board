@@ -127,6 +127,30 @@ export function WhereDoIStand({
         </div>
       </div>
 
+      {/* Live skin lead on this hole */}
+      {liveLead && (
+        <div className="flex items-center gap-2 border-b border-border bg-gold/10 px-3 py-2">
+          <Flame className="h-4 w-4 shrink-0 text-gold animate-pulse" />
+          <div className="min-w-0 flex-1 text-[12px] font-bold leading-tight">
+            <span className="text-gold">
+              Skin on H{currentHole}:
+            </span>{" "}
+            <span className="text-foreground">
+              {liveLead.tied
+                ? `${liveLead.leaders.map((l) => l.p.initials).join(" / ")} tied at ${labelForScore(liveLead.stroke, liveLead.par)}`
+                : `${liveLead.leaders[0].p.name} leads with ${labelForScore(liveLead.stroke, liveLead.par)}`}
+            </span>
+          </div>
+          <span className={cn(
+            "shrink-0 rounded-md px-1.5 py-0.5 font-tabular text-[10px] font-extrabold uppercase tracking-wider",
+            liveLead.tied ? "bg-bubble/20 text-bubble" : "bg-gold/20 text-gold",
+          )}>
+            {liveLead.tied ? "Carry?" : "Skin"}
+          </span>
+        </div>
+      )}
+
+
       {/* Hero row — three big stats */}
       <div className="grid grid-cols-3 divide-x divide-border border-b border-border">
         <Stat
