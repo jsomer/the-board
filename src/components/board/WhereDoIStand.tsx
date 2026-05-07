@@ -26,6 +26,15 @@ const SKIN_RESULTS: HoleSkin[] = [
 
 const ME_ID = "p1";
 
+// Mirror of leaderboard quota config
+const QUOTAS: Record<string, number> = {
+  p1: 36, p2: 34, p3: 32, p4: 30, p5: 30, p6: 28, p7: 26, p8: 24,
+};
+
+function pointsFor(p: { thru: number; toPar: number; skins: number }): number {
+  return Math.max(0, p.thru * 2 - p.toPar * 2 + p.skins);
+}
+
 export function WhereDoIStand({ currentHole }: { currentHole: number }) {
   const me = seedPlayers.find((p) => p.id === ME_ID)!;
 
@@ -33,9 +42,6 @@ export function WhereDoIStand({ currentHole }: { currentHole: number }) {
   const mySkins = SKIN_RESULTS.filter((s) => s.winner === ME_ID);
   const mySkinValue = mySkins.reduce((sum, s) => sum + s.value, 0);
 
-  // Carry pot rolling forward into the next hole that has not yet been decided.
-  // Anything before currentHole that has no winner contributes; the next live
-  // hole holds that pot.
   const carryFromBack = SKIN_RESULTS
     .filter((s) => s.hole < currentHole && s.winner === null)
     .reduce((sum, s) => sum + s.value, 0);
@@ -44,36 +50,28 @@ export function WhereDoIStand({ currentHole }: { currentHole: number }) {
   const liveValue = liveHole?.value ?? 5;
   const livePot = liveValue + carryFromBack;
 
-  // Rivals — closest skin leaders by count
-  const skinsByPid = SKIN_RESULTS.reduce<Record<string, { count: number; value: number }>>((acc, s) => {
-    if (!s.winner) return acc;
-    acc[s.winner] = acc[s.winner] ?? { count: 0, value: 0 };
-    acc[s.winner].count += 1;
-    acc[s.winner].value += s.value;
-    return acc;
-  }, {});
-  const ranking = Object.entries(skinsByPid)
-    .map(([pid, v]) => ({ pid, ...v }))
-    .sort((a, b) => b.count - a.count || b.value - a.value);
-  const myRank = Math.max(1, ranking.findIndex((r) => r.pid === ME_ID) + 1);
-  const leadingSkins = ranking[0];
-  const closestRival = ranking.find((r) => r.pid !== ME_ID);
-  const isLeader = leadingSkins?.pid === ME_ID;
-  const gapToLeader = isLeader ? 0 : (leadingSkins?.count ?? 0) - mySkins.length;
-  const gapToRival = closestRival ? mySkins.length - closestRival.count : 0;
+  // ── Quota math ─────────────────────────────────────────────
+  const myPoints = pointsFor(me);
+  const myQuota = QUOTAS[ME_ID] ?? 30;
+  const pacedTarget = Math.max(1, Math.round((myQuota * me.thru) / 18));
+  const quotaDiff = myPoints - pacedTarget;
+  const projectedPoints = me.thru > 0 ? Math.round((myPoints / me.thru) * 18) : 0;
+  const projectedDiff = projectedPoints - myQuota;
+  const beatingQuota = quotaDiff >= 0;
+  const pct = Math.min(120, Math.round((myPoints / pacedTarget) * 100));
 
-  // Pressure copy
+  // Pressure copy — combine skins + quota
   const pressure = useMemo(() => {
-    if (isLeader && gapToRival >= 2)
-      return { tone: "leader" as const, text: `Skins lead by ${gapToRival} — defend the pot` };
-    if (isLeader)
-      return { tone: "leader" as const, text: `Skins leader by 1 — one slip and ${initials(closestRival?.pid)} ties you` };
-    if (gapToLeader === 1)
-      return { tone: "bubble" as const, text: `1 skin back of ${initials(leadingSkins?.pid)} — birdie this hole to tie` };
-    return { tone: "down" as const, text: `${gapToLeader} skins back — need a run to catch up` };
-  }, [isLeader, gapToRival, gapToLeader, leadingSkins?.pid, closestRival?.pid]);
+    if (projectedDiff >= 3 && mySkins.length >= 2)
+      return { tone: "leader" as const, text: `Crushing — pacing +${projectedDiff} on quota with ${mySkins.length} skins` };
+    if (beatingQuota && projectedDiff >= 0)
+      return { tone: "leader" as const, text: `Beating quota by ${quotaDiff} — protect the run` };
+    if (quotaDiff === 0)
+      return { tone: "bubble" as const, text: `Right on quota pace — birdie this hole to pull ahead` };
+    return { tone: "down" as const, text: `${Math.abs(quotaDiff)} pts under pace — need to ignite a run` };
+  }, [beatingQuota, quotaDiff, projectedDiff, mySkins.length]);
 
-  // Pulse the live pot every few seconds for that sportsbook feel
+  // Pulse the live pot
   const [pulse, setPulse] = useState(false);
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -87,7 +85,7 @@ export function WhereDoIStand({ currentHole }: { currentHole: number }) {
 
   return (
     <section className="mx-4 mt-3 overflow-hidden rounded-3xl border border-border bg-card shadow-card">
-      {/* Top status bar — gradient sportsbook strip */}
+      {/* Top status bar */}
       <div className="relative bg-gradient-to-r from-[color-mix(in_oklab,var(--gold)_18%,var(--card))] via-card to-[color-mix(in_oklab,var(--primary)_15%,var(--card))] px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1 rounded-full bg-money/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-money">
@@ -117,11 +115,11 @@ export function WhereDoIStand({ currentHole }: { currentHole: number }) {
           tone="gold"
         />
         <Stat
-          label="Skins Rank"
-          value={`#${myRank}`}
-          sub={isLeader ? "Leading" : `${gapToLeader} back`}
-          icon={isLeader ? <Trophy className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-          tone={isLeader ? "gold" : "down"}
+          label="Pts / Quota"
+          value={`${myPoints}/${myQuota}`}
+          sub={beatingQuota ? `+${quotaDiff} vs pace` : `${quotaDiff} vs pace`}
+          icon={beatingQuota ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+          tone={beatingQuota ? "money" : "down"}
         />
         <Stat
           label={`Hole ${currentHole} Pot`}
@@ -133,9 +131,30 @@ export function WhereDoIStand({ currentHole }: { currentHole: number }) {
         />
       </div>
 
+      {/* Quota progress bar */}
+      <div className="px-3 pt-2.5">
+        <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+          <span>Quota pace · thru {me.thru}</span>
+          <span className={cn("font-tabular", beatingQuota ? "text-money" : "text-down")}>
+            Proj {projectedPoints} ({projectedDiff >= 0 ? `+${projectedDiff}` : projectedDiff})
+          </span>
+        </div>
+        <div className="relative mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-2">
+          {/* 100% pace marker */}
+          <div className="absolute inset-y-0 left-[83.3%] w-px bg-foreground/30" aria-hidden />
+          <div
+            className={cn(
+              "h-full rounded-full transition-all",
+              beatingQuota ? "bg-money" : "bg-bubble",
+            )}
+            style={{ width: `${Math.min(100, (pct / 120) * 100)}%` }}
+          />
+        </div>
+      </div>
+
       {/* Pressure callout */}
       <div className={cn(
-        "flex items-center gap-2 px-3 py-2 text-[12px] font-bold",
+        "mt-2 flex items-center gap-2 px-3 py-2 text-[12px] font-bold",
         pressure.tone === "leader" && "bg-gold/10 text-gold",
         pressure.tone === "bubble" && "bg-bubble/10 text-bubble",
         pressure.tone === "down" && "bg-down/10 text-down",
@@ -146,67 +165,29 @@ export function WhereDoIStand({ currentHole }: { currentHole: number }) {
         <span className="truncate">{pressure.text}</span>
       </div>
 
-      {/* Carries & rival watch */}
-      <div className="grid grid-cols-2 divide-x divide-border">
-        <div className="px-3 py-2.5">
-          <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+      {/* Carries on board */}
+      <div className="border-t border-border px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
             Carries on board
-          </div>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="font-tabular text-lg font-extrabold text-gold">{carries}</span>
-            <span className="text-[10px] font-semibold text-muted-foreground">holes open</span>
-          </div>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {SKIN_RESULTS.filter((s) => !s.winner).map((s) => (
-              <span
-                key={s.hole}
-                className={cn(
-                  "rounded-md px-1.5 py-0.5 font-tabular text-[9px] font-extrabold",
-                  s.hole === currentHole
-                    ? "bg-gold text-background animate-pulse"
-                    : "bg-gold/15 text-gold",
-                )}
-              >
-                H{s.hole}
-              </span>
-            ))}
-          </div>
+          </span>
+          <span className="font-tabular text-xs font-extrabold text-gold">{carries}</span>
+          <span className="text-[10px] font-semibold text-muted-foreground">holes open</span>
         </div>
-
-        <div className="px-3 py-2.5">
-          <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-            Rival watch
-          </div>
-          {closestRival ? (
-            <div className="mt-1">
-              <div className="flex items-center gap-1.5">
-                <span className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-md text-[9px] font-extrabold",
-                  rivalPlayer(closestRival.pid)?.team === "Eagles"
-                    ? "bg-primary/15 text-primary"
-                    : "bg-bubble/15 text-bubble",
-                )}>
-                  {initials(closestRival.pid)}
-                </span>
-                <span className="truncate text-[12px] font-bold">{rivalPlayer(closestRival.pid)?.name}</span>
-              </div>
-              <div className="mt-1 flex items-center gap-1 text-[10px] font-bold">
-                <Flame className="h-3 w-3 text-gold" />
-                <span className="font-tabular text-gold">{closestRival.count} skins</span>
-                <span className={cn(
-                  "ml-auto inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 font-tabular text-[10px] font-extrabold",
-                  gapToRival > 0 ? "bg-money/15 text-money" :
-                  gapToRival < 0 ? "bg-down/15 text-down" :
-                  "bg-surface-2 text-muted-foreground",
-                )}>
-                  {gapToRival > 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
-                  {gapToRival > 0 ? `+${gapToRival}` : gapToRival}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-1 text-[10px] text-muted-foreground">No rivals yet</div>
-          )}
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {SKIN_RESULTS.filter((s) => !s.winner).map((s) => (
+            <span
+              key={s.hole}
+              className={cn(
+                "rounded-md px-1.5 py-0.5 font-tabular text-[9px] font-extrabold",
+                s.hole === currentHole
+                  ? "bg-gold text-background animate-pulse"
+                  : "bg-gold/15 text-gold",
+              )}
+            >
+              H{s.hole} · ${s.value}
+            </span>
+          ))}
         </div>
       </div>
     </section>
@@ -218,12 +199,13 @@ function Stat({
 }: {
   label: string; value: string; sub: string;
   icon: React.ReactNode;
-  tone: "gold" | "primary" | "down";
+  tone: "gold" | "primary" | "down" | "money";
   pulse?: boolean;
 }) {
   const toneCls =
     tone === "gold" ? "text-gold" :
     tone === "primary" ? "text-primary" :
+    tone === "money" ? "text-money" :
     "text-down";
   return (
     <div className="flex flex-col items-center justify-center px-2 py-3">
@@ -240,15 +222,6 @@ function Stat({
       <div className="mt-0.5 text-[10px] font-semibold text-muted-foreground">{sub}</div>
     </div>
   );
-}
-
-function rivalPlayer(pid: string) {
-  return seedPlayers.find((p) => p.id === pid);
-}
-
-function initials(pid?: string) {
-  if (!pid) return "—";
-  return seedPlayers.find((p) => p.id === pid)?.initials ?? "—";
 }
 
 void event;
