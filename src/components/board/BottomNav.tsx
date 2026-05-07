@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 const ITEMS = [
   { key: "board",    label: "Board",    icon: Trophy,         to: "/" as const },
   { key: "score",    label: "Score",    icon: Zap,            to: "/score" as const },
-  { key: "matchups", label: "Matchups", icon: Swords,         to: "/" as const },
+  { key: "matchups", label: "Matchups", icon: Swords,         to: "/matchups" as const },
   { key: "cards",    label: "Cards",    icon: ClipboardList,  to: "/" as const },
   { key: "admin",    label: "Admin",    icon: Settings2,      to: "/admin" as const },
 ];
