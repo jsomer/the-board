@@ -191,6 +191,27 @@ export function WhereDoIStand({
         </div>
       )}
 
+      {/* Next skin change hint */}
+      {skinHint && (
+        <div className={cn(
+          "flex items-center gap-2 border-b border-border px-3 py-1.5 text-[11px] font-semibold leading-tight",
+          skinHint.tone === "gold" && "bg-gold/5",
+          skinHint.tone === "primary" && "bg-primary/5",
+          skinHint.tone === "bubble" && "bg-bubble/5",
+          skinHint.tone === "down" && "bg-down/5",
+          skinHint.tone === "neutral" && "bg-surface-2",
+        )}>
+          <Zap className={cn("h-3.5 w-3.5 shrink-0",
+            skinHint.tone === "gold" && "text-gold",
+            skinHint.tone === "primary" && "text-primary",
+            skinHint.tone === "bubble" && "text-bubble",
+            skinHint.tone === "down" && "text-down",
+            skinHint.tone === "neutral" && "text-muted-foreground",
+          )} />
+          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Next skin change</span>
+          <span className="min-w-0 flex-1 text-foreground/90">{skinHint.text}</span>
+        </div>
+      )}
 
       {/* Hero row — three big stats */}
       <div className="grid grid-cols-3 divide-x divide-border border-b border-border">
