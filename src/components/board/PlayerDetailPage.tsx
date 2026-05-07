@@ -109,6 +109,17 @@ export function PlayerDetailPage() {
   const skinsValue = skinsWon.reduce((sum, h) => sum + h.skinValue, 0);
   const beating = diff > 0;
 
+  const jumpToHole = (hole: number) => {
+    const el = document.getElementById(`hole-${hole}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.animate(
+        [{ transform: "scale(1)" }, { transform: "scale(1.15)" }, { transform: "scale(1)" }],
+        { duration: 450, easing: "ease-out" },
+      );
+    }
+  };
+
   return (
     <main className="mx-auto min-h-screen max-w-xl pb-28">
       {/* Header */}
