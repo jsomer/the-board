@@ -35,8 +35,30 @@ function pointsFor(p: { thru: number; toPar: number; skins: number }): number {
   return Math.max(0, p.thru * 2 - p.toPar * 2 + p.skins);
 }
 
-export function WhereDoIStand({ currentHole }: { currentHole: number }) {
+export function WhereDoIStand({
+  currentHole,
+  scores,
+  pars,
+}: {
+  currentHole: number;
+  scores?: Record<string, Record<number, number | undefined>>;
+  pars?: number[];
+}) {
   const me = seedPlayers.find((p) => p.id === ME_ID)!;
+
+  // ── Live skin lead on the current hole ─────────────────────
+  const liveLead = useMemo(() => {
+    if (!scores || !pars) return null;
+    const par = pars[currentHole - 1];
+    const entries = seedPlayers
+      .map((p) => ({ p, stroke: scores[p.id]?.[currentHole] }))
+      .filter((e): e is { p: typeof seedPlayers[number]; stroke: number } => e.stroke != null);
+    if (entries.length === 0) return null;
+    const lowest = Math.min(...entries.map((e) => e.stroke));
+    const leaders = entries.filter((e) => e.stroke === lowest);
+    return { leaders, stroke: lowest, par, tied: leaders.length > 1 };
+  }, [scores, pars, currentHole]);
+
 
   // ── Skins math ─────────────────────────────────────────────
   const mySkins = SKIN_RESULTS.filter((s) => s.winner === ME_ID);
