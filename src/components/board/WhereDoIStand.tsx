@@ -35,8 +35,30 @@ function pointsFor(p: { thru: number; toPar: number; skins: number }): number {
   return Math.max(0, p.thru * 2 - p.toPar * 2 + p.skins);
 }
 
-export function WhereDoIStand({ currentHole }: { currentHole: number }) {
+export function WhereDoIStand({
+  currentHole,
+  scores,
+  pars,
+}: {
+  currentHole: number;
+  scores?: Record<string, Record<number, number | undefined>>;
+  pars?: number[];
+}) {
   const me = seedPlayers.find((p) => p.id === ME_ID)!;
+
+  // ── Live skin lead on the current hole ─────────────────────
+  const liveLead = useMemo(() => {
+    if (!scores || !pars) return null;
+    const par = pars[currentHole - 1];
+    const entries = seedPlayers
+      .map((p) => ({ p, stroke: scores[p.id]?.[currentHole] }))
+      .filter((e): e is { p: typeof seedPlayers[number]; stroke: number } => e.stroke != null);
+    if (entries.length === 0) return null;
+    const lowest = Math.min(...entries.map((e) => e.stroke));
+    const leaders = entries.filter((e) => e.stroke === lowest);
+    return { leaders, stroke: lowest, par, tied: leaders.length > 1 };
+  }, [scores, pars, currentHole]);
+
 
   // ── Skins math ─────────────────────────────────────────────
   const mySkins = SKIN_RESULTS.filter((s) => s.winner === ME_ID);
@@ -104,6 +126,30 @@ export function WhereDoIStand({ currentHole }: { currentHole: number }) {
           </span>
         </div>
       </div>
+
+      {/* Live skin lead on this hole */}
+      {liveLead && (
+        <div className="flex items-center gap-2 border-b border-border bg-gold/10 px-3 py-2">
+          <Flame className="h-4 w-4 shrink-0 text-gold animate-pulse" />
+          <div className="min-w-0 flex-1 text-[12px] font-bold leading-tight">
+            <span className="text-gold">
+              Skin on H{currentHole}:
+            </span>{" "}
+            <span className="text-foreground">
+              {liveLead.tied
+                ? `${liveLead.leaders.map((l) => l.p.initials).join(" / ")} tied at ${labelForScore(liveLead.stroke, liveLead.par)}`
+                : `${liveLead.leaders[0].p.name} leads with ${labelForScore(liveLead.stroke, liveLead.par)}`}
+            </span>
+          </div>
+          <span className={cn(
+            "shrink-0 rounded-md px-1.5 py-0.5 font-tabular text-[10px] font-extrabold uppercase tracking-wider",
+            liveLead.tied ? "bg-bubble/20 text-bubble" : "bg-gold/20 text-gold",
+          )}>
+            {liveLead.tied ? "Carry?" : "Skin"}
+          </span>
+        </div>
+      )}
+
 
       {/* Hero row — three big stats */}
       <div className="grid grid-cols-3 divide-x divide-border border-b border-border">
@@ -225,3 +271,16 @@ function Stat({
 }
 
 void event;
+
+function labelForScore(stroke: number, par: number): string {
+  const off = stroke - par;
+  if (stroke === 1) return "Ace";
+  if (off <= -3) return "Albatross";
+  if (off === -2) return "Eagle";
+  if (off === -1) return "Birdie";
+  if (off === 0) return "Par";
+  if (off === 1) return "Bogey";
+  if (off === 2) return "Double";
+  return `+${off}`;
+}
+
