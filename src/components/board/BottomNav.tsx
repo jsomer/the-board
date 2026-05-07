@@ -7,7 +7,7 @@ const ITEMS = [
   { key: "score",    label: "Score",    icon: Zap,            to: "/score" as const },
   { key: "matchups", label: "Matchups", icon: Swords,         to: "/" as const },
   { key: "cards",    label: "Cards",    icon: ClipboardList,  to: "/" as const },
-  { key: "admin",    label: "Admin",    icon: Settings2,      to: "/" as const },
+  { key: "admin",    label: "Admin",    icon: Settings2,      to: "/admin" as const },
 ];
 
 export function BottomNav({ active = "board" }: { active?: string }) {
