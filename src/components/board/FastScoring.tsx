@@ -4,6 +4,7 @@ import { players as seedPlayers, event } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { WhereDoIStand } from "./WhereDoIStand";
 
 // Course pars (18 holes) — fictional but realistic
 const PARS = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 3, 5, 4];
@@ -134,8 +135,11 @@ export function FastScoring() {
         </div>
       </header>
 
+      {/* Where You Stand — live competitive context */}
+      <WhereDoIStand currentHole={hole} />
+
       {/* Hole pager */}
-      <div className="mx-4 mt-2 flex items-stretch overflow-hidden rounded-2xl border border-border bg-surface/70 shadow-card">
+      <div className="mx-4 mt-3 flex items-stretch overflow-hidden rounded-2xl border border-border bg-surface/70 shadow-card">
         <button
           aria-label="Previous hole"
           onClick={() => setHole((h) => Math.max(1, h - 1))}
