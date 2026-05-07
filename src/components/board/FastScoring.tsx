@@ -136,7 +136,7 @@ export function FastScoring() {
       </header>
 
       {/* Where You Stand — live competitive context */}
-      <WhereDoIStand currentHole={hole} />
+      <WhereDoIStand currentHole={hole} scores={scores} pars={PARS} />
 
       {/* Hole pager */}
       <div className="mx-4 mt-3 flex items-stretch overflow-hidden rounded-2xl border border-border bg-surface/70 shadow-card">
