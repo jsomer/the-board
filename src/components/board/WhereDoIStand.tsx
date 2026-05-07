@@ -56,8 +56,49 @@ export function WhereDoIStand({
     if (entries.length === 0) return null;
     const lowest = Math.min(...entries.map((e) => e.stroke));
     const leaders = entries.filter((e) => e.stroke === lowest);
-    return { leaders, stroke: lowest, par, tied: leaders.length > 1 };
+    const myStroke = scores[ME_ID]?.[currentHole];
+    return { leaders, stroke: lowest, par, tied: leaders.length > 1, myStroke, scoredCount: entries.length };
   }, [scores, pars, currentHole]);
+
+  // ── Next skin change hint ──────────────────────────────────
+  const skinHint = useMemo(() => {
+    if (!pars) return null;
+    const par = pars[currentHole - 1];
+    if (!liveLead) {
+      return { tone: "neutral" as const, text: `Open hole — first to ${labelForScore(par - 1, par)} sets the bar` };
+    }
+    const { stroke, tied, myStroke, leaders } = liveLead;
+    const meLeadsAlone = !tied && leaders[0].p.id === ME_ID;
+    if (myStroke == null) {
+      // I haven't scored yet
+      const toTake = stroke - 1;
+      const toTie = stroke;
+      if (toTake < 1)
+        return { tone: "down" as const, text: `${leaders[0].p.initials} carded ${labelForScore(stroke, par)} — unbeatable, skin is gone` };
+      return {
+        tone: "primary" as const,
+        text: `Score ${labelForScore(toTake, par)} or better to steal · ${labelForScore(toTie, par)} forces a carry`,
+      };
+    }
+    if (meLeadsAlone) {
+      const flipAt = myStroke; // someone matching ties → carry; lower → steals
+      return {
+        tone: "gold" as const,
+        text: `You lead — anyone ${labelForScore(flipAt, par)} ties (carry), lower steals`,
+      };
+    }
+    if (tied && leaders.some((l) => l.p.id === ME_ID)) {
+      return { tone: "bubble" as const, text: `You're tied — anyone going lower flips the skin` };
+    }
+    // I'm trailing
+    const need = stroke - 1;
+    if (need < 1)
+      return { tone: "down" as const, text: `Skin locked at ${labelForScore(stroke, par)} — can't be beaten` };
+    return {
+      tone: "down" as const,
+      text: `Need ${labelForScore(need, par)} to flip · ${labelForScore(stroke, par)} forces a carry`,
+    };
+  }, [liveLead, pars, currentHole]);
 
 
   // ── Skins math ─────────────────────────────────────────────
