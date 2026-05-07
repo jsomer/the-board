@@ -109,6 +109,17 @@ export function PlayerDetailPage() {
   const skinsValue = skinsWon.reduce((sum, h) => sum + h.skinValue, 0);
   const beating = diff > 0;
 
+  const jumpToHole = (hole: number) => {
+    const el = document.getElementById(`hole-${hole}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.animate(
+        [{ transform: "scale(1)" }, { transform: "scale(1.15)" }, { transform: "scale(1)" }],
+        { duration: 450, easing: "ease-out" },
+      );
+    }
+  };
+
   return (
     <main className="mx-auto min-h-screen max-w-xl pb-28">
       {/* Header */}
@@ -167,6 +178,48 @@ export function PlayerDetailPage() {
           <Stat label="Skins" value={`${skinsWon.length} · $${skinsValue}`} icon={<Flame className="h-3 w-3" />} tone="gold" />
         </div>
       </header>
+
+      {/* Jump to hole */}
+      <section className="mx-4 mt-3">
+        <div className="mb-2 flex items-center gap-2">
+          <Target className="h-4 w-4 text-primary" />
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Jump to hole</h2>
+          <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Thru {player.thru}/18
+          </span>
+        </div>
+        <div className="grid grid-cols-9 gap-1 rounded-2xl border border-border bg-card p-2 shadow-card">
+          {holes.map((h) => {
+            const played = h.score !== null;
+            const isCurrent = h.hole === player.thru;
+            return (
+              <button
+                key={h.hole}
+                type="button"
+                onClick={() => jumpToHole(h.hole)}
+                aria-label={`Jump to hole ${h.hole}`}
+                className={cn(
+                  "relative flex h-9 items-center justify-center rounded-lg font-tabular text-[12px] font-extrabold transition-all active:scale-95",
+                  isCurrent
+                    ? "bg-primary text-primary-foreground shadow-[0_0_0_2px_color-mix(in_oklab,var(--primary)_45%,transparent)]"
+                    : played
+                      ? (h.toPar ?? 0) <= -1
+                        ? "bg-money/15 text-money hover:bg-money/25"
+                        : (h.toPar ?? 0) === 0
+                          ? "bg-surface-2 text-foreground hover:bg-surface-2/70"
+                          : "bg-down/10 text-down hover:bg-down/20"
+                      : "bg-surface-2/40 text-muted-foreground/60 hover:bg-surface-2",
+                )}
+              >
+                {h.hole}
+                {h.wonSkin && (
+                  <Flame className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 text-gold" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Hole-by-hole */}
       <section className="mx-4 mt-3">
@@ -260,7 +313,7 @@ function HoleCell({ h }: { h: HoleRow }) {
         ? "border-border bg-card text-foreground"
         : "border-down/25 bg-down/5 text-down";
   return (
-    <div className={cn("relative flex flex-col items-center rounded-lg border px-1 py-1.5", tone)}>
+    <div id={`hole-${h.hole}`} className={cn("relative flex flex-col items-center rounded-lg border px-1 py-1.5 scroll-mt-24", tone)}>
       <span className="text-[8px] font-bold uppercase tracking-wider opacity-70">H{h.hole}</span>
       <span className="font-tabular text-sm font-extrabold leading-none">
         {played ? h.score : "—"}
