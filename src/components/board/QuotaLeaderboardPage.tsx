@@ -205,6 +205,7 @@ export function QuotaLeaderboardPage() {
                   {r.skinsWon}
                 </span>
               </div>
+            </Link>
             </li>
           );
         })}
