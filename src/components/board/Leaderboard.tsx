@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, Flame, Minus, Trophy } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useBoardData } from "@/lib/board/context";
