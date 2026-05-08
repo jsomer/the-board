@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Check, Undo2, Flag, Cloud, CloudOff, Loader2, Zap } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Undo2, Flag, Cloud, CloudOff, Loader2, Zap, Lock } from "lucide-react";
+import { toast } from "sonner";
 import { useBoardData } from "@/lib/board/context";
 import { useHoleScoreSync } from "@/hooks/useHoleScoreSync";
+import { useHoleLocks } from "@/lib/board/holeLocks";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
