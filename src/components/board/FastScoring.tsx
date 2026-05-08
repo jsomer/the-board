@@ -49,6 +49,8 @@ export function FastScoring() {
   const player = seedPlayers[playerIdx] ?? seedPlayers[0];
   const par = PARS[hole - 1];
   const current = player ? scores[player.id]?.[hole] : undefined;
+  const { locked: lockedHoles } = useHoleLocks();
+  const isLocked = lockedHoles.includes(hole);
 
   // Quick options anchored to par
   const options = useMemo(() => {
