@@ -9,7 +9,7 @@ import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
-import { useHoleLocks, lockHole, unlockHole, clearHoleAudit } from "@/lib/board/holeLocks";
+import { useHoleLocks, useHoleLockActions, clearHoleAudit } from "@/lib/board/holeLocks";
 
 type Tab = "event" | "players" | "payouts" | "locks" | "ticker";
 
@@ -411,22 +411,27 @@ function IconBtn({ children, onClick, disabled, danger }: { children: React.Reac
 function LocksPanel({ currentHole, onChange }: { currentHole: number; onChange: () => void }) {
   const { locked, audit } = useHoleLocks();
   const { players } = useBoardData();
+  const { lock, unlock } = useHoleLockActions();
   // Best-effort actor name — first player marked as "you" if any, else "Admin".
   const actor = players.find((p) => (p as unknown as { isMe?: boolean }).isMe)?.name ?? "Admin";
 
-  const toggle = (h: number) => {
-    if (locked.includes(h)) unlockHole(h, actor);
-    else lockHole(h, actor);
+  const toggle = async (h: number) => {
+    if (locked.includes(h)) await unlock(h, actor);
+    else await lock(h, actor);
     onChange();
   };
 
-  const lockThrough = (n: number) => {
-    for (let h = 1; h <= n; h++) if (!locked.includes(h)) lockHole(h, actor, `Bulk lock through ${n}`);
+  const lockThrough = async (n: number) => {
+    for (let h = 1; h <= n; h++) {
+      if (!locked.includes(h)) await lock(h, actor, `Bulk lock through ${n}`);
+    }
     onChange();
   };
 
-  const unlockAll = () => {
-    [...locked].forEach((h) => unlockHole(h, actor, "Bulk unlock"));
+  const unlockAll = async () => {
+    for (const h of [...locked]) {
+      await unlock(h, actor, "Bulk unlock");
+    }
     onChange();
   };
 
