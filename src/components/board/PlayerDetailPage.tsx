@@ -126,7 +126,15 @@ export function PlayerDetailPage() {
   const priorProjected = Math.max(0, player.projected - player.movement * 20);
   const projectedDelta = player.projected - priorProjected;
 
-  const jumpToHole = (hole: number) => {
+  // Field-wide hole-by-hole results for distribution + skin attribution
+  const fieldHoles = useMemo(
+    () => seedPlayers.map((p) => ({ player: p, rows: buildHoles(p) })),
+    [seedPlayers],
+  );
+
+  const [openHole, setOpenHole] = useState<number | null>(null);
+
+
     const el = document.getElementById(`hole-${hole}`);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
