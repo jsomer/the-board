@@ -146,6 +146,41 @@ export function BoardDataProvider({ children }: { children: ReactNode }) {
   // 3) Derive UI shapes; track previous positions for movement deltas
   const prevPositions = useRef<Map<string, number>>(new Map());
   const prevPlayers = useRef<Player[] | null>(null);
+  const lastErrorRef = useRef<string | null>(null);
+
+  const refresh = () => {
+    void eventQ.refetch();
+    void sideBetsQ.refetch();
+    void eventsList.refetch();
+  };
+
+  const logout = () => {
+    apiLogout();
+    setAuthed(false);
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  };
+
+  const lastUpdatedAt = useMemo(() => {
+    const a = eventQ.dataUpdatedAt ?? 0;
+    const b = sideBetsQ.dataUpdatedAt ?? 0;
+    const m = Math.max(a, b);
+    return m > 0 ? m : null;
+  }, [eventQ.dataUpdatedAt, sideBetsQ.dataUpdatedAt]);
+
+  const isFetching = eventQ.isFetching || sideBetsQ.isFetching;
+
+  // Toast on new error transitions
+  const currentError = pickError(eventQ.error) || pickError(sideBetsQ.error) || pickError(eventsList.error);
+  useEffect(() => {
+    if (currentError && currentError !== lastErrorRef.current) {
+      lastErrorRef.current = currentError;
+      toast.error("Connection issue", { description: currentError });
+    } else if (!currentError) {
+      lastErrorRef.current = null;
+    }
+  }, [currentError]);
 
   const derived = useMemo<BoardData>(() => {
     const evt = eventQ.data;
@@ -161,9 +196,13 @@ export function BoardDataProvider({ children }: { children: ReactNode }) {
         skins: null,
         loading: eventQ.isLoading || eventsList.isLoading,
         authed,
-        error: pickError(eventQ.error) || pickError(eventsList.error),
+        error: currentError,
         isMock: true,
         eventId: resolvedEventId,
+        lastUpdatedAt,
+        isFetching,
+        refresh,
+        logout,
       };
     }
     const { players, positions } = derivePlayers(evt, sb, prevPositions.current);
@@ -185,8 +224,13 @@ export function BoardDataProvider({ children }: { children: ReactNode }) {
       error: null,
       isMock: false,
       eventId: resolvedEventId,
+      lastUpdatedAt,
+      isFetching,
+      refresh,
+      logout,
     };
-  }, [eventQ.data, sideBetsQ.data, eventQ.isLoading, eventQ.error, eventsList.isLoading, eventsList.error, authed, resolvedEventId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventQ.data, sideBetsQ.data, eventQ.isLoading, eventsList.isLoading, currentError, authed, resolvedEventId, lastUpdatedAt, isFetching]);
 
   return <Ctx.Provider value={derived}>{children}</Ctx.Provider>;
 }
