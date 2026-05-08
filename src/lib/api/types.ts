@@ -28,6 +28,37 @@ export interface EventRecord {
 
 export interface MeResponse {
   playerId: number | null;
+  isAdmin?: boolean;
+}
+
+export interface GameSetup {
+  id: number;
+  name: string;
+  scoring_type: "gross_stroke" | "net_stroke" | "stableford" | string;
+  entry_fee?: number | null;
+}
+
+export interface Course {
+  id: number;
+  name: string;
+}
+
+export interface PlayerRecord {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  usga_handicap?: number | null;
+  game_points_needed?: number | null;
+}
+
+export interface CreateEventPayload {
+  name: string;
+  gameSetupId: number;
+  eventDate?: string;
+  startTime?: string;
+  courseId?: number | null;
+  entryFee?: number;
 }
 
 export interface SkinHole {
@@ -75,4 +106,6 @@ export type SideBet =
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  isAdmin?: boolean;
+  user?: { id?: number; email?: string; isAdmin?: boolean } | null;
 }
