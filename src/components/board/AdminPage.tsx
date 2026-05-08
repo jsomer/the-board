@@ -250,9 +250,13 @@ export function AdminPage() {
           </Panel>
         )}
 
-        {tab === "locks" && (
-          <LocksPanel currentHole={rawEvent?.players?.[0]?.holeScores?.filter((s) => s > 0).length || hole} onChange={flash} />
-        )}
+        {tab === "locks" && (() => {
+          // Hole the whole group has finished = min(holes-played) across all players
+          const liveHole = rawEvent?.players?.length
+            ? Math.min(...rawEvent.players.map((p) => p.holeScores.filter((s) => s > 0).length))
+            : hole;
+          return <LocksPanel currentHole={liveHole} onChange={flash} />;
+        })()}
 
         {tab === "ticker" && (
           <Panel title="Live Ticker">
