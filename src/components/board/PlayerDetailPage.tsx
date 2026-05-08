@@ -175,15 +175,6 @@ export function PlayerDetailPage() {
 
       {/* Header */}
       <header className="px-4 pb-3 pt-3">
-        <div className="hidden">
-          <Link to="/" aria-label="Live Board">Live Board</Link>
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1 rounded-full bg-money/15 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-money">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-money" /> Live · H{event.hole}
-            </span>
-            <ThemeSwitcher />
-          </div>
-        </div>
 
         {/* Player hero */}
         <div className={cn(
