@@ -2,15 +2,16 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft, Settings2, Play, Pause, RefreshCcw, DollarSign, Flag, Users,
-  Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio,
+  Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio, History,
 } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { useHoleLocks, lockHole, unlockHole, clearHoleAudit } from "@/lib/board/holeLocks";
 
-type Tab = "event" | "players" | "payouts" | "ticker";
+type Tab = "event" | "players" | "payouts" | "locks" | "ticker";
 
 export function AdminPage() {
   const { players: seedPlayers, teams: seedTeams, event: seedEvent, tickerItems: seedTicker } = useBoardData();
@@ -134,7 +135,7 @@ export function AdminPage() {
 
       {/* Tabs */}
       <nav className="mx-4 mt-4 flex gap-1 rounded-2xl border border-border bg-surface/70 p-1">
-        {(["event", "players", "payouts", "ticker"] as Tab[]).map((t) => (
+        {(["event", "players", "payouts", "locks", "ticker"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -249,6 +250,8 @@ export function AdminPage() {
           </Panel>
         )}
 
+        {tab === "locks" && <LocksPanel currentHole={hole} onChange={flash} />}
+
         {tab === "ticker" && (
           <Panel title="Live Ticker">
             <Field label="Tag">
@@ -309,7 +312,7 @@ export function AdminPage() {
 const inputCls =
   "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground focus:border-primary";
 
-function Panel({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+function Panel({ title, action, children }: { title: React.ReactNode; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-3.5 shadow-card">
       <div className="mb-2.5 flex items-center justify-between">
@@ -397,4 +400,137 @@ function IconBtn({ children, onClick, disabled, danger }: { children: React.Reac
       {children}
     </button>
   );
+}
+
+function LocksPanel({ currentHole, onChange }: { currentHole: number; onChange: () => void }) {
+  const { locked, audit } = useHoleLocks();
+  const { players } = useBoardData();
+  // Best-effort actor name — first player marked as "you" if any, else "Admin".
+  const actor = players.find((p) => (p as unknown as { isMe?: boolean }).isMe)?.name ?? "Admin";
+
+  const toggle = (h: number) => {
+    if (locked.includes(h)) unlockHole(h, actor);
+    else lockHole(h, actor);
+    onChange();
+  };
+
+  const lockThrough = (n: number) => {
+    for (let h = 1; h <= n; h++) if (!locked.includes(h)) lockHole(h, actor, `Bulk lock through ${n}`);
+    onChange();
+  };
+
+  const unlockAll = () => {
+    [...locked].forEach((h) => unlockHole(h, actor, "Bulk unlock"));
+    onChange();
+  };
+
+  return (
+    <>
+      <Panel
+        title="Hole Locks"
+        action={
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => lockThrough(currentHole)}
+              className="rounded-full bg-bubble/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-bubble"
+            >
+              <Lock className="mr-1 inline h-3 w-3" /> Lock thru {currentHole}
+            </button>
+            <button
+              onClick={unlockAll}
+              disabled={locked.length === 0}
+              className="rounded-full bg-surface-2 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-foreground disabled:opacity-30"
+            >
+              <Unlock className="mr-1 inline h-3 w-3" /> Unlock all
+            </button>
+          </div>
+        }
+      >
+        <p className="text-[11px] text-muted-foreground">
+          Locked holes prevent edits in Fast Scoring. Unlock to allow corrections.
+        </p>
+        <div className="grid grid-cols-6 gap-1.5">
+          {Array.from({ length: 18 }, (_, i) => i + 1).map((h) => {
+            const isLk = locked.includes(h);
+            return (
+              <button
+                key={h}
+                onClick={() => toggle(h)}
+                className={cn(
+                  "relative flex h-12 flex-col items-center justify-center rounded-xl border font-tabular text-sm font-extrabold transition-all",
+                  isLk
+                    ? "border-bubble/40 bg-bubble/15 text-bubble"
+                    : "border-border bg-surface text-foreground hover:bg-surface-2",
+                )}
+              >
+                {h}
+                {isLk ? (
+                  <Lock className="mt-0.5 h-3 w-3" />
+                ) : (
+                  <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    open
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </Panel>
+
+      <Panel
+        title={
+          <span className="flex items-center gap-1.5">
+            <History className="h-3 w-3" /> Audit trail
+          </span>
+        }
+        action={
+          audit.length > 0 ? (
+            <button
+              onClick={() => { clearHoleAudit(); onChange(); }}
+              className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-down"
+            >
+              <Trash2 className="mr-1 inline h-3 w-3" /> Clear
+            </button>
+          ) : undefined
+        }
+      >
+        {audit.length === 0 ? (
+          <p className="text-[12px] text-muted-foreground">No lock activity yet.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {audit.map((a, i) => (
+              <li
+                key={i}
+                className="flex items-center justify-between rounded-xl border border-border bg-surface px-2.5 py-2 text-[12px]"
+              >
+                <span className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-extrabold",
+                      a.action === "lock" ? "bg-bubble/15 text-bubble" : "bg-money/15 text-money",
+                    )}
+                  >
+                    {a.action === "lock" ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                  </span>
+                  <span className="font-semibold">
+                    Hole {a.hole} {a.action === "lock" ? "locked" : "unlocked"}
+                  </span>
+                  <span className="text-muted-foreground">· {a.actor}</span>
+                </span>
+                <span className="font-tabular text-[10px] text-muted-foreground">{fmtTime(a.at)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+    </>
+  );
+}
+
+function fmtTime(ts: number) {
+  const d = new Date(ts);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const t = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return sameDay ? t : `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${t}`;
 }

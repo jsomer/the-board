@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Check, Undo2, Flag, Cloud, CloudOff, Loader2, Zap } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Undo2, Flag, Cloud, CloudOff, Loader2, Zap, Lock } from "lucide-react";
+import { toast } from "sonner";
 import { useBoardData } from "@/lib/board/context";
 import { useHoleScoreSync } from "@/hooks/useHoleScoreSync";
+import { useHoleLocks } from "@/lib/board/holeLocks";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -14,7 +16,7 @@ type Scores = Record<string, Record<number, number | undefined>>;
 export function FastScoring() {
   const { players: seedPlayers, event, rawEvent, eventId } = useBoardData();
   const PARS = (rawEvent?.hole_pars && rawEvent.hole_pars.length === 18) ? rawEvent.hole_pars : DEFAULT_PARS;
-  const { queue, status, savedTick } = useHoleScoreSync(eventId);
+  const { queue, status, savedTick, pendingCount, online } = useHoleScoreSync(eventId);
 
   // Derive scores from live event (so optimistic updates + polling reflect here);
   // fall back to seed data when not authed / mock mode.
@@ -47,6 +49,8 @@ export function FastScoring() {
   const player = seedPlayers[playerIdx] ?? seedPlayers[0];
   const par = PARS[hole - 1];
   const current = player ? scores[player.id]?.[hole] : undefined;
+  const { locked: lockedHoles } = useHoleLocks();
+  const isLocked = lockedHoles.includes(hole);
 
   // Quick options anchored to par
   const options = useMemo(() => {
@@ -68,6 +72,10 @@ export function FastScoring() {
 
   const enter = (stroke: number) => {
     if (!player) return;
+    if (isLocked) {
+      toast.error(`Hole ${hole} is locked`, { description: "Ask an admin to unlock it before editing." });
+      return;
+    }
     const prev = scores[player.id]?.[hole];
     setLastEntry({ pid: player.id, hole, prev });
     queue({
@@ -88,6 +96,10 @@ export function FastScoring() {
 
   const undo = () => {
     if (!lastEntry) return;
+    if (lockedHoles.includes(lastEntry.hole)) {
+      toast.error(`Hole ${lastEntry.hole} is locked`);
+      return;
+    }
     queue({
       playerId: lastEntry.pid,
       holeNumber: lastEntry.hole,
@@ -149,7 +161,7 @@ export function FastScoring() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <SaveIndicator status={status} flash={savedFlash} />
+            <SaveIndicator status={status} flash={savedFlash} pendingCount={pendingCount} online={online} />
             <ThemeSwitcher />
           </div>
         </div>
@@ -174,6 +186,11 @@ export function FastScoring() {
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Par</span>
             <span className="font-tabular text-lg font-bold leading-none">{par}</span>
           </div>
+          {isLocked && (
+            <span className="ml-1 flex items-center gap-1 rounded-full bg-bubble/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-bubble">
+              <Lock className="h-3 w-3" /> Locked
+            </span>
+          )}
         </div>
         <button
           aria-label="Next hole"
@@ -190,12 +207,13 @@ export function FastScoring() {
           const h = i + 1;
           const filled = scores[player.id]?.[h] != null;
           const active = h === hole;
+          const lk = lockedHoles.includes(h);
           return (
             <button
               key={h}
               onClick={() => setHole(h)}
               className={cn(
-                "flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-tabular text-[11px] font-bold",
+                "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-tabular text-[11px] font-bold",
                 active
                   ? "bg-primary text-primary-foreground shadow-[0_0_0_2px_color-mix(in_oklab,var(--primary)_50%,transparent)]"
                   : filled
@@ -204,6 +222,9 @@ export function FastScoring() {
               )}
             >
               {h}
+              {lk && (
+                <Lock className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 text-bubble" />
+              )}
             </button>
           );
         })}
@@ -264,15 +285,17 @@ export function FastScoring() {
         </div>
 
         {/* Giant score buttons */}
-        <div className="mt-4 grid grid-cols-3 gap-2.5">
+        <div className={cn("mt-4 grid grid-cols-3 gap-2.5", isLocked && "opacity-50")}>
           {options.map((o) => {
             const active = current === o.stroke;
             return (
               <button
                 key={o.stroke}
                 onClick={() => enter(o.stroke)}
+                disabled={isLocked}
                 className={cn(
                   "group relative flex h-24 flex-col items-center justify-center rounded-2xl border text-foreground transition-all active:scale-[0.97]",
+                  isLocked && "cursor-not-allowed",
                   active
                     ? "border-transparent bg-gradient-to-b from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] text-primary-foreground shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
                     : "border-border bg-surface hover:bg-surface-2",
@@ -294,6 +317,11 @@ export function FastScoring() {
             );
           })}
         </div>
+        {isLocked && (
+          <div className="mt-2 flex items-center justify-center gap-1.5 rounded-xl border border-bubble/30 bg-bubble/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-bubble">
+            <Lock className="h-3 w-3" /> Hole {hole} finalized — edits disabled
+          </div>
+        )}
 
         {/* Footer row */}
         <div className="mt-4 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -351,31 +379,56 @@ function fmtToPar(n: number) {
   return n > 0 ? `+${n}` : `${n}`;
 }
 
-function SaveIndicator({ status, flash }: { status: "idle" | "saving" | "saved" | "error"; flash: boolean }) {
+function SaveIndicator({
+  status,
+  flash,
+  pendingCount,
+  online,
+}: {
+  status: "idle" | "saving" | "saved" | "error" | "offline";
+  flash: boolean;
+  pendingCount: number;
+  online: boolean;
+}) {
+  const isOffline = status === "offline" || !online;
   const isSaving = status === "saving";
   const isError = status === "error";
-  const showSaved = flash && !isError && !isSaving;
+  const showSaved = flash && !isError && !isSaving && !isOffline;
+  const queued = pendingCount > 0;
+  const label = isOffline
+    ? queued ? `Offline · ${pendingCount}` : "Offline"
+    : isError
+      ? queued ? `Retry · ${pendingCount}` : "Retry"
+      : isSaving
+        ? "Saving"
+        : showSaved
+          ? "Saved"
+          : queued
+            ? `Queued · ${pendingCount}`
+            : "Auto-save";
   return (
     <span
       className={cn(
         "flex items-center gap-1 rounded-full border border-border bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
-        isError
-          ? "border-down/40 text-down"
-          : showSaved
-            ? "text-money"
-            : isSaving
-              ? "text-foreground"
-              : "text-muted-foreground",
+        isOffline
+          ? "border-bubble/40 text-bubble"
+          : isError
+            ? "border-down/40 text-down"
+            : showSaved
+              ? "text-money"
+              : isSaving
+                ? "text-foreground"
+                : "text-muted-foreground",
       )}
     >
-      {isError ? (
+      {isOffline || isError ? (
         <CloudOff className="h-3 w-3" />
       ) : isSaving ? (
         <Loader2 className="h-3 w-3 animate-spin" />
       ) : (
         <Cloud className="h-3 w-3" />
       )}
-      {isError ? "Retry" : isSaving ? "Saving" : showSaved ? "Saved" : "Auto-save"}
+      {label}
     </span>
   );
 }
