@@ -266,6 +266,16 @@ export function AdminPage() {
           </Panel>
         )}
 
+        {tab === "groups" && (
+          eventId != null ? (
+            <GroupsManager eventId={eventId} rawEvent={rawEvent} />
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+              Create or load an event before setting up groups.
+            </div>
+          )
+        )}
+
         {tab === "payouts" && (
           <Panel title="Payouts & Skins">
             <Field label="Skins pot $">
