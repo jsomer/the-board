@@ -1,4 +1,5 @@
-import { ArrowDown, ArrowUp, Flame, Minus, Trophy } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, Flame, Minus, Trophy } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
@@ -37,13 +38,17 @@ function Row({ player, pos }: { player: Player; pos: number }) {
   const teamColor = player.team === "Eagles" ? "bg-money/80" : "bg-bubble/80";
 
   return (
-    <li
-      className={cn(
-        "relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-surface px-3 py-2.5 shadow-card",
-        isLeader && "gradient-leader border-money/40",
-        player.bubble && !isLeader && "gradient-pressure border-bubble/40",
-      )}
-    >
+    <li>
+      <Link
+        to="/player/$playerId"
+        params={{ playerId: String(player.id) }}
+        aria-label={`Open scorecard for ${player.name}`}
+        className={cn(
+          "group relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-surface px-3 py-2.5 shadow-card transition-colors hover:bg-surface/80 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          isLeader && "gradient-leader border-money/40",
+          player.bubble && !isLeader && "gradient-pressure border-bubble/40",
+        )}
+      >
       {/* Position */}
       <div className="flex w-8 flex-col items-center">
         <span className={cn(
@@ -106,6 +111,8 @@ function Row({ player, pos }: { player: Player; pos: number }) {
           {player.projected > 0 ? `+$${player.projected}` : "—"}
         </div>
       </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
+      </Link>
     </li>
   );
 }
