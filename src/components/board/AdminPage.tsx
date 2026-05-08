@@ -11,10 +11,11 @@ import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { CreateEventDialog } from "./CreateEventDialog";
+import { GroupsManager } from "./GroupsManager";
 import { useHoleLocks, useHoleLockActions, clearHoleAudit } from "@/lib/board/holeLocks";
 import { getMe, getStoredIsAdmin, isAuthenticated } from "@/lib/api/auth";
 
-type Tab = "event" | "players" | "payouts" | "locks" | "ticker";
+type Tab = "event" | "players" | "groups" | "payouts" | "locks" | "ticker";
 
 export function AdminPage() {
   const { players: seedPlayers, teams: seedTeams, event: seedEvent, tickerItems: seedTicker, rawEvent, eventId, isMock } = useBoardData();
@@ -178,7 +179,7 @@ export function AdminPage() {
 
       {/* Tabs */}
       <nav className="mx-4 mt-4 flex gap-1 rounded-2xl border border-border bg-surface/70 p-1">
-        {(["event", "players", "payouts", "locks", "ticker"] as Tab[]).map((t) => (
+        {(["event", "players", "groups", "payouts", "locks", "ticker"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -263,6 +264,16 @@ export function AdminPage() {
               ))}
             </ul>
           </Panel>
+        )}
+
+        {tab === "groups" && (
+          eventId != null ? (
+            <GroupsManager eventId={eventId} rawEvent={rawEvent} />
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+              Create or load an event before setting up groups.
+            </div>
+          )
         )}
 
         {tab === "payouts" && (
