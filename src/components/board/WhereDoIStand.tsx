@@ -306,7 +306,7 @@ function Stat({
   );
 }
 
-void event;
+
 
 function labelForScore(stroke: number, par: number): string {
   const off = stroke - par;
