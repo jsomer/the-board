@@ -20,6 +20,12 @@ export interface HoleScorePayload {
 }
 
 export function postHoleScore(eventId: number | string, payload: HoleScorePayload) {
+  if (!Number.isFinite(payload.playerId) || payload.playerId <= 0) {
+    return Promise.reject(new Error(`Invalid playerId: ${String(payload.playerId)}`));
+  }
+  if (!Number.isInteger(payload.holeNumber) || payload.holeNumber < 1 || payload.holeNumber > 18) {
+    return Promise.reject(new Error(`Invalid holeNumber: ${payload.holeNumber}`));
+  }
   return api<unknown>(`/events/${eventId}/hole-score`, {
     method: "POST",
     body: payload,
