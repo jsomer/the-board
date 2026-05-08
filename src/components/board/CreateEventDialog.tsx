@@ -459,10 +459,15 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
               <Button
                 size="sm"
                 onClick={() => addPlayers.mutate()}
-                disabled={selectedPlayers.size === 0 || addPlayers.isPending}
+                disabled={
+                  selectedPlayers.size === 0 ||
+                  addPlayers.isPending ||
+                  quotasLoading
+                }
+                title={quotasLoading ? "Waiting for quotas to load…" : undefined}
               >
                 {addPlayers.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Add {selectedPlayers.size || ""} & open
+                {quotasLoading ? "Loading quotas…" : `Add ${selectedPlayers.size || ""} & open`}
               </Button>
             </div>
           ) : (
