@@ -44,6 +44,10 @@ export interface BoardData {
   error: string | null;
   isMock: boolean; // true when falling back to seeded mock data
   eventId: number | null;
+  lastUpdatedAt: number | null;
+  isFetching: boolean;
+  refresh: () => void;
+  logout: () => void;
 }
 
 const Ctx = createContext<BoardData | null>(null);
