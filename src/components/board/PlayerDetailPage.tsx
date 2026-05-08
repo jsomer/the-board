@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag } from "lucide-react";
-import { players as seedPlayers, event } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
