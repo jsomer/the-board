@@ -16,7 +16,7 @@ type Scores = Record<string, Record<number, number | undefined>>;
 export function FastScoring() {
   const { players: seedPlayers, event, rawEvent, eventId } = useBoardData();
   const PARS = (rawEvent?.hole_pars && rawEvent.hole_pars.length === 18) ? rawEvent.hole_pars : DEFAULT_PARS;
-  const { queue, status, savedTick, pendingCount, online } = useHoleScoreSync(eventId);
+  const { queue, clear, status, savedTick, pendingCount, online } = useHoleScoreSync(eventId);
 
   // Derive scores from live event (so optimistic updates + polling reflect here);
   // fall back to seed data when not authed / mock mode.
@@ -100,12 +100,17 @@ export function FastScoring() {
       toast.error(`Hole ${lastEntry.hole} is locked`);
       return;
     }
-    queue({
-      playerId: lastEntry.pid,
-      holeNumber: lastEntry.hole,
-      grossScore: lastEntry.prev ?? 0,
-      prevScore: scores[lastEntry.pid]?.[lastEntry.hole] ?? 0,
-    });
+    if (lastEntry.prev == null || lastEntry.prev < 1) {
+      // No prior score — clear locally instead of posting an invalid 0.
+      clear({ playerId: lastEntry.pid, holeNumber: lastEntry.hole });
+    } else {
+      queue({
+        playerId: lastEntry.pid,
+        holeNumber: lastEntry.hole,
+        grossScore: lastEntry.prev,
+        prevScore: scores[lastEntry.pid]?.[lastEntry.hole] ?? 0,
+      });
+    }
     setLastEntry(null);
   };
 
