@@ -43,24 +43,18 @@ export function WhereDoIStand({
   pars?: number[];
 }) {
   const { players: livePlayers, skins: skinsState, rawEvent } = useBoardData();
+  const { meId: authMeId } = useMe();
   const [expanded, setExpanded] = useState(false);
 
-  // "me" — first player as a sensible default (TODO: wire to current user)
-  const ME_ID = livePlayers[0]?.id ?? "p1";
+  // Resolve "me" from /auth/me; fall back to first player only if unknown
+  const ME_ID = authMeId ?? livePlayers[0]?.id ?? "p1";
   const me = livePlayers.find((p) => p.id === ME_ID) ?? livePlayers[0];
 
   // Build per-hole skin records: from real SkinsState if present, else fallback
   const skinResults: HoleSkin[] = useMemo(() => {
-    if (skinsState && rawEvent) {
-      const perHoleBase = skinsState.participants.length > 0 ? skinsState.pot / 18 : 5;
-      return skinsState.holes.map((h) => ({
-        hole: h.hole,
-        winner: h.winner != null ? String(h.winner) : null,
-        value: Math.round((h.carryIn + 1) * perHoleBase),
-      }));
-    }
-    return FALLBACK_SKINS;
-  }, [skinsState, rawEvent]);
+    const fromApi = skinRowsFromState(skinsState);
+    return fromApi.length > 0 ? fromApi : FALLBACK_SKINS;
+  }, [skinsState]);
 
   // ── Live skin lead on the current hole ─────────────────────
   const liveLead = useMemo(() => {
