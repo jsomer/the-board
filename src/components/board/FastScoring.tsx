@@ -186,6 +186,11 @@ export function FastScoring() {
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Par</span>
             <span className="font-tabular text-lg font-bold leading-none">{par}</span>
           </div>
+          {isLocked && (
+            <span className="ml-1 flex items-center gap-1 rounded-full bg-bubble/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-bubble">
+              <Lock className="h-3 w-3" /> Locked
+            </span>
+          )}
         </div>
         <button
           aria-label="Next hole"
