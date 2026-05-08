@@ -52,6 +52,7 @@ export function FastScoring() {
   const [savedFlash, setSavedFlash] = useState(false);
   const [lastEntry, setLastEntry] = useState<{ pid: string; hole: number; prev?: number } | null>(null);
   const swipeRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const [roundOpen, setRoundOpen] = useState(false);
 
   const player = seedPlayers[playerIdx] ?? seedPlayers[0];
   const par = PARS[hole - 1];
