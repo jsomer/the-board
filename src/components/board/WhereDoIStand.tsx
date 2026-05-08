@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Flame, TrendingUp, TrendingDown, Zap, Trophy, AlertTriangle, ChevronDown } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
+import { useMe } from "@/hooks/useMe";
+import { skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 import { cn } from "@/lib/utils";
 
-// Mirror of leaderboard skin results (mock fallback)
-type HoleSkin = { hole: number; winner: string | null; value: number };
+// Mock fallback used only when the API has not produced a SkinsState yet
 const FALLBACK_SKINS: HoleSkin[] = [
   { hole: 1,  winner: "p1", value: 5 },
   { hole: 2,  winner: null, value: 5 },
