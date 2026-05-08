@@ -334,9 +334,6 @@ function GroupCard({
       <div className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {group.members.length}/4 players
       </div>
-
-      {/* avoid unused warning */}
-      <span hidden>{qc ? "" : ""}</span>
     </div>
   );
 }
