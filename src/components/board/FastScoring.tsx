@@ -161,7 +161,7 @@ export function FastScoring() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <SaveIndicator status={status} flash={savedFlash} />
+            <SaveIndicator status={status} flash={savedFlash} pendingCount={pendingCount} online={online} />
             <ThemeSwitcher />
           </div>
         </div>
