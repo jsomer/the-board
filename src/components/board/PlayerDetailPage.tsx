@@ -134,7 +134,7 @@ export function PlayerDetailPage() {
 
   const [openHole, setOpenHole] = useState<number | null>(null);
 
-
+  const jumpToHole = (hole: number) => {
     const el = document.getElementById(`hole-${hole}`);
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
