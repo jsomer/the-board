@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Flame, TrendingUp, TrendingDown, Zap, Trophy, AlertTriangle, ChevronDown } from "lucide-react";
-import { players as seedPlayers, event } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
 import { cn } from "@/lib/utils";
 
-// Mirror of leaderboard skin results so the strip is consistent
+// Mirror of leaderboard skin results (mock fallback)
 type HoleSkin = { hole: number; winner: string | null; value: number };
-const SKIN_RESULTS: HoleSkin[] = [
+const FALLBACK_SKINS: HoleSkin[] = [
   { hole: 1,  winner: "p1", value: 5 },
   { hole: 2,  winner: null, value: 5 },
   { hole: 3,  winner: "p3", value: 10 },
@@ -24,13 +24,11 @@ const SKIN_RESULTS: HoleSkin[] = [
   { hole: 16, winner: "p1", value: 5 },
 ];
 
-const ME_ID = "p1";
-
-const QUOTAS: Record<string, number> = {
+const FALLBACK_QUOTAS: Record<string, number> = {
   p1: 36, p2: 34, p3: 32, p4: 30, p5: 30, p6: 28, p7: 26, p8: 24,
 };
 
-function pointsFor(p: { thru: number; toPar: number; skins: number }): number {
+function pointsForFallback(p: { thru: number; toPar: number; skins: number }): number {
   return Math.max(0, p.thru * 2 - p.toPar * 2 + p.skins);
 }
 
@@ -43,22 +41,39 @@ export function WhereDoIStand({
   scores?: Record<string, Record<number, number | undefined>>;
   pars?: number[];
 }) {
-  const me = seedPlayers.find((p) => p.id === ME_ID)!;
+  const { players: livePlayers, skins: skinsState, rawEvent } = useBoardData();
   const [expanded, setExpanded] = useState(false);
+
+  // "me" — first player as a sensible default (TODO: wire to current user)
+  const ME_ID = livePlayers[0]?.id ?? "p1";
+  const me = livePlayers.find((p) => p.id === ME_ID) ?? livePlayers[0];
+
+  // Build per-hole skin records: from real SkinsState if present, else fallback
+  const skinResults: HoleSkin[] = useMemo(() => {
+    if (skinsState && rawEvent) {
+      const perHoleBase = skinsState.participants.length > 0 ? skinsState.pot / 18 : 5;
+      return skinsState.holes.map((h) => ({
+        hole: h.hole,
+        winner: h.winner != null ? String(h.winner) : null,
+        value: Math.round((h.carryIn + 1) * perHoleBase),
+      }));
+    }
+    return FALLBACK_SKINS;
+  }, [skinsState, rawEvent]);
 
   // ── Live skin lead on the current hole ─────────────────────
   const liveLead = useMemo(() => {
     if (!scores || !pars) return null;
     const par = pars[currentHole - 1];
-    const entries = seedPlayers
+    const entries = livePlayers
       .map((p) => ({ p, stroke: scores[p.id]?.[currentHole] }))
-      .filter((e): e is { p: typeof seedPlayers[number]; stroke: number } => e.stroke != null);
+      .filter((e): e is { p: typeof livePlayers[number]; stroke: number } => e.stroke != null);
     if (entries.length === 0) return null;
     const lowest = Math.min(...entries.map((e) => e.stroke));
     const leaders = entries.filter((e) => e.stroke === lowest);
     const myStroke = scores[ME_ID]?.[currentHole];
     return { leaders, stroke: lowest, par, tied: leaders.length > 1, myStroke };
-  }, [scores, pars, currentHole]);
+  }, [scores, pars, currentHole, livePlayers, ME_ID]);
 
   // ── Single-line action hint (merged skin lead + next change) ─
   const action = useMemo(() => {
@@ -83,26 +98,30 @@ export function WhereDoIStand({
     const need = stroke - 1;
     if (need < 1) return { tone: "down" as const, headline: lead, detail: `Skin locked` };
     return { tone: "down" as const, headline: lead, detail: `Need ${labelForScore(need, par)} to flip` };
-  }, [liveLead, pars, currentHole]);
+  }, [liveLead, pars, currentHole, ME_ID]);
 
   // ── Skins math ─────────────────────────────────────────────
-  const mySkins = SKIN_RESULTS.filter((s) => s.winner === ME_ID);
+  const mySkins = skinResults.filter((s) => s.winner === ME_ID);
   const mySkinValue = mySkins.reduce((sum, s) => sum + s.value, 0);
 
-  const carryFromBack = SKIN_RESULTS
+  const carryFromBack = skinResults
     .filter((s) => s.hole < currentHole && s.winner === null)
     .reduce((sum, s) => sum + s.value, 0);
 
-  const liveHole = SKIN_RESULTS.find((s) => s.hole === currentHole);
-  const liveValue = liveHole?.value ?? 5;
+  const liveHoleSkin = skinResults.find((s) => s.hole === currentHole);
+  const liveValue = liveHoleSkin?.value ?? 5;
   const livePot = liveValue + carryFromBack;
 
   // ── Quota math ─────────────────────────────────────────────
-  const myPoints = pointsFor(me);
-  const myQuota = QUOTAS[ME_ID] ?? 30;
-  const pacedTarget = Math.max(1, Math.round((myQuota * me.thru) / 18));
+  const realMe = rawEvent?.players.find((p) => String(p.player_id) === ME_ID);
+  const myPoints = realMe
+    ? realMe.achieved + (realMe.adjustment ?? 0)
+    : me ? pointsForFallback(me) : 0;
+  const myQuota = realMe?.quota ?? FALLBACK_QUOTAS[ME_ID] ?? 30;
+  const meThru = me?.thru ?? 0;
+  const pacedTarget = Math.max(1, Math.round((myQuota * meThru) / 18));
   const quotaDiff = myPoints - pacedTarget;
-  const projectedPoints = me.thru > 0 ? Math.round((myPoints / me.thru) * 18) : 0;
+  const projectedPoints = meThru > 0 ? Math.round((myPoints / meThru) * 18) : 0;
   const projectedDiff = projectedPoints - myQuota;
   const beatingQuota = quotaDiff >= 0;
   const pct = Math.min(120, Math.round((myPoints / pacedTarget) * 100));
@@ -126,7 +145,7 @@ export function WhereDoIStand({
     return () => window.clearInterval(id);
   }, []);
 
-  const carries = SKIN_RESULTS.filter((s) => !s.winner).length;
+  const carries = skinResults.filter((s) => !s.winner).length;
 
   const actionToneText =
     action?.tone === "gold" ? "text-gold"
@@ -236,7 +255,7 @@ export function WhereDoIStand({
               Carries · {carries} open
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {SKIN_RESULTS.filter((s) => !s.winner).map((s) => (
+              {skinResults.filter((s) => !s.winner).map((s) => (
                 <span
                   key={s.hole}
                   className={cn(
@@ -287,7 +306,7 @@ function Stat({
   );
 }
 
-void event;
+
 
 function labelForScore(stroke: number, par: number): string {
   const off = stroke - par;

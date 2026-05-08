@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Target, Flame, TrendingUp, TrendingDown, Minus, Flag, Trophy } from "lucide-react";
-import { players as seedPlayers, event } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
@@ -55,6 +55,8 @@ type Row = {
 };
 
 export function QuotaLeaderboardPage() {
+  const { players: seedPlayers, event: boardEvent } = useBoardData();
+  const event = boardEvent;
   const rows: Row[] = useMemo(() => {
     const skinsByPid = SKIN_RESULTS.reduce<Record<string, { count: number; value: number }>>((acc, s) => {
       if (!s.winner) return acc;

@@ -1,27 +1,38 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Check, Undo2, Flag, Cloud, Zap } from "lucide-react";
-import { players as seedPlayers, event } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { WhereDoIStand } from "./WhereDoIStand";
 
-// Course pars (18 holes) — fictional but realistic
-const PARS = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 3, 5, 4];
+const DEFAULT_PARS = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 3, 5, 4];
 
 type Scores = Record<string, Record<number, number | undefined>>;
 
-const initialScores = (): Scores => {
-  const map: Scores = {};
-  for (const p of seedPlayers) {
-    map[p.id] = {};
-    // backfill: assume each player has scored par on holes < their thru
-    for (let h = 1; h <= p.thru; h++) map[p.id][h] = PARS[h - 1] + (h === p.lastHole?.hole ? p.lastHole.score - p.lastHole.par : 0);
-  }
-  return map;
-};
-
 export function FastScoring() {
+  const { players: seedPlayers, event, rawEvent } = useBoardData();
+  const PARS = (rawEvent?.hole_pars && rawEvent.hole_pars.length === 18) ? rawEvent.hole_pars : DEFAULT_PARS;
+
+  const initialScores = (): Scores => {
+    const map: Scores = {};
+    if (rawEvent) {
+      for (const p of rawEvent.players) {
+        map[String(p.player_id)] = {};
+        p.holeScores.forEach((s, i) => {
+          if (s > 0) map[String(p.player_id)][i + 1] = s;
+        });
+      }
+      return map;
+    }
+    for (const p of seedPlayers) {
+      map[p.id] = {};
+      for (let h = 1; h <= p.thru; h++)
+        map[p.id][h] = PARS[h - 1] + (h === p.lastHole?.hole ? p.lastHole.score - p.lastHole.par : 0);
+    }
+    return map;
+  };
+
   const [scores, setScores] = useState<Scores>(initialScores);
   const [playerIdx, setPlayerIdx] = useState(0);
   const [hole, setHole] = useState(event.hole);
@@ -29,9 +40,9 @@ export function FastScoring() {
   const [lastEntry, setLastEntry] = useState<{ pid: string; hole: number; prev?: number } | null>(null);
   const swipeRef = useRef<{ x: number; y: number; t: number } | null>(null);
 
-  const player = seedPlayers[playerIdx];
+  const player = seedPlayers[playerIdx] ?? seedPlayers[0];
   const par = PARS[hole - 1];
-  const current = scores[player.id]?.[hole];
+  const current = player ? scores[player.id]?.[hole] : undefined;
 
   // Quick options anchored to par: -2..+3 with named labels
   const options = useMemo(() => {

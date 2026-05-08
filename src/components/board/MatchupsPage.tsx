@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Swords, TrendingUp, TrendingDown, Minus, Flame, ChevronRight, DollarSign, Trophy, Users } from "lucide-react";
-import { players as seedPlayers, teams as seedTeams, event } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
@@ -31,6 +31,8 @@ const H2H_MATCHUPS: Omit<H2H, "a" | "b">[] = [
 ];
 
 export function MatchupsPage() {
+  const { players: seedPlayers, teams: seedTeams, event: boardEvent } = useBoardData();
+  const event = boardEvent;
   const [mode, setMode] = useState<Mode>("team");
 
   const eaglesPlayers = seedPlayers.filter((p) => p.team === "Eagles");
@@ -165,6 +167,7 @@ export function MatchupsPage() {
 }
 
 function TeamMatchupCard({ teamSwing }: { teamSwing: number }) {
+  const { teams: seedTeams } = useBoardData();
   const [eagles, hawks] = seedTeams;
   const lead = eagles.score - hawks.score;
   const eaglesUp = lead < 0;
@@ -321,13 +324,14 @@ function PlayerSide({ p, winning, right }: { p: Player; winning: boolean; right?
 }
 
 function SkinsLeaderCard() {
+  const { players: seedPlayers, event: boardEvent } = useBoardData();
   const top = [...seedPlayers].sort((a, b) => b.skins - a.skins)[0];
   return (
     <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-4 shadow-card">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/60 to-transparent" />
       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
         <span>Skins leader</span>
-        <span className="text-gold">${event.skinsPot} pending</span>
+        <span className="text-gold">${boardEvent.skinsPot} pending</span>
       </div>
       <div className="mt-3 flex items-center gap-3">
         <span className={cn(
