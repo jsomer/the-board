@@ -32,6 +32,18 @@ export function postHoleScore(eventId: number | string, payload: HoleScorePayloa
   });
 }
 
+export function lockHoleRequest(eventId: number | string, hole: number) {
+  return api<{ locked_holes: number[] }>(`/events/${eventId}/holes/${hole}/lock`, {
+    method: "POST",
+  });
+}
+
+export function unlockHoleRequest(eventId: number | string, hole: number) {
+  return api<{ locked_holes: number[] }>(`/events/${eventId}/holes/${hole}/unlock`, {
+    method: "POST",
+  });
+}
+
 export function pickActiveEvent(events: EventRecord[]): EventRecord | null {
   if (!events.length) return null;
   // Prefer active, then draft, then highest id

@@ -23,6 +23,11 @@ export interface EventRecord {
   payout_breakdown_json?: { rank: number; pct: number }[] | null;
   players: EventPlayer[];
   teams_json?: Record<string, string> | null; // playerId -> teamName (when backend ships it)
+  locked_holes?: number[]; // server-managed list of finalized hole numbers
+}
+
+export interface MeResponse {
+  playerId: number | null;
 }
 
 export interface SkinHole {

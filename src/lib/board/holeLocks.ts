@@ -1,106 +1,171 @@
-// Lightweight client-side hole lock store with audit trail.
-// Persisted in localStorage, shared across the app via a tiny pub/sub +
-// useSyncExternalStore hook. No backend yet — purely a UI-side guard.
+// Server-driven hole locks.
+//
+// The list of locked holes lives on the EventRecord and is refreshed by the
+// normal poll. Lock/unlock actions hit the API and apply an optimistic update
+// to the React Query cache so the UI flips immediately.
+//
+// We still keep a small client-side AUDIT log of admin actions taken in this
+// browser. The backend doesn't ship one yet, so this is best-effort and only
+// shows what *this* admin did locally — labelled accordingly in the UI.
 
 import { useSyncExternalStore } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { lockHoleRequest, unlockHoleRequest } from "@/lib/api/events";
+import { ApiError } from "@/lib/api/client";
+import type { EventRecord } from "@/lib/api/types";
+import { toast } from "sonner";
 
-const KEY = "gt_holeLocks_v1";
+const AUDIT_KEY = "gt_holeLocks_audit_v1";
 
 export interface HoleAuditEntry {
   hole: number;
   action: "lock" | "unlock";
   actor: string;
-  at: number; // epoch ms
+  at: number;
   note?: string;
 }
 
-export interface HoleLocksState {
-  locked: number[]; // sorted ascending list of locked hole numbers
-  audit: HoleAuditEntry[]; // newest first
-}
+// ---------------- audit log (client-only) ----------------
 
-const EMPTY: HoleLocksState = { locked: [], audit: [] };
-
-function read(): HoleLocksState {
-  if (typeof window === "undefined") return EMPTY;
+function readAudit(): HoleAuditEntry[] {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return EMPTY;
-    const parsed = JSON.parse(raw) as HoleLocksState;
-    if (!parsed || !Array.isArray(parsed.locked) || !Array.isArray(parsed.audit)) return EMPTY;
-    return parsed;
+    const raw = window.localStorage.getItem(AUDIT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as HoleAuditEntry[]) : [];
   } catch {
-    return EMPTY;
+    return [];
   }
 }
 
-let cache: HoleLocksState = read();
-const listeners = new Set<() => void>();
+let auditCache: HoleAuditEntry[] = readAudit();
+const auditListeners = new Set<() => void>();
 
-function emit() {
-  for (const l of listeners) l();
+function emitAudit() {
+  for (const l of auditListeners) l();
 }
 
-function write(next: HoleLocksState) {
-  cache = next;
+function writeAudit(next: HoleAuditEntry[]) {
+  auditCache = next.slice(0, 200);
   if (typeof window !== "undefined") {
     try {
-      window.localStorage.setItem(KEY, JSON.stringify(next));
+      window.localStorage.setItem(AUDIT_KEY, JSON.stringify(auditCache));
     } catch {
-      /* quota / disabled — ignore */
+      /* ignore quota */
     }
   }
-  emit();
+  emitAudit();
+}
+
+function pushAudit(entry: HoleAuditEntry) {
+  writeAudit([entry, ...auditCache]);
+}
+
+export function clearHoleAudit() {
+  writeAudit([]);
 }
 
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
-    if (e.key === KEY) {
-      cache = read();
-      emit();
+    if (e.key === AUDIT_KEY) {
+      auditCache = readAudit();
+      emitAudit();
     }
   });
 }
 
-function subscribe(cb: () => void) {
-  listeners.add(cb);
-  return () => listeners.delete(cb);
+function subscribeAudit(cb: () => void) {
+  auditListeners.add(cb);
+  return () => auditListeners.delete(cb);
+}
+function getAuditSnapshot() {
+  return auditCache;
+}
+function getAuditServerSnapshot(): HoleAuditEntry[] {
+  return [];
 }
 
-function getSnapshot() {
-  return cache;
+export function useHoleLockAudit(): HoleAuditEntry[] {
+  return useSyncExternalStore(subscribeAudit, getAuditSnapshot, getAuditServerSnapshot);
 }
 
-function getServerSnapshot() {
-  return EMPTY;
+// ---------------- locked-holes derivation ----------------
+
+// The single source of truth for `locked` lives in the React Query cache for
+// `["event", eventId]`. Components that need it should read from useBoardData()
+// — but we expose a hook here for callers that already use this module.
+
+import { useBoardData } from "./context";
+
+export interface HoleLocksState {
+  locked: number[];
+  audit: HoleAuditEntry[];
 }
 
 export function useHoleLocks(): HoleLocksState {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const { rawEvent } = useBoardData();
+  const audit = useHoleLockAudit();
+  const locked = (rawEvent?.locked_holes ?? []).slice().sort((a, b) => a - b);
+  return { locked, audit };
 }
 
-export function isHoleLocked(hole: number): boolean {
-  return cache.locked.includes(hole);
+/**
+ * Read the current locked-holes list without subscribing (e.g. from event
+ * handlers). Falls back to an empty array when no event is loaded.
+ */
+export function isHoleLocked(hole: number, lockedHoles?: number[]): boolean {
+  if (lockedHoles) return lockedHoles.includes(hole);
+  return false;
 }
 
-export function lockHole(hole: number, actor = "Admin", note?: string) {
-  if (cache.locked.includes(hole)) return;
-  const entry: HoleAuditEntry = { hole, action: "lock", actor, at: Date.now(), note };
-  write({
-    locked: [...cache.locked, hole].sort((a, b) => a - b),
-    audit: [entry, ...cache.audit].slice(0, 200),
-  });
+// ---------------- mutation hooks ----------------
+
+function patchCache(qc: ReturnType<typeof useQueryClient>, eventId: number, next: number[]) {
+  qc.setQueryData<EventRecord>(["event", eventId], (old) =>
+    old ? { ...old, locked_holes: next } : old,
+  );
 }
 
-export function unlockHole(hole: number, actor = "Admin", note?: string) {
-  if (!cache.locked.includes(hole)) return;
-  const entry: HoleAuditEntry = { hole, action: "unlock", actor, at: Date.now(), note };
-  write({
-    locked: cache.locked.filter((h) => h !== hole),
-    audit: [entry, ...cache.audit].slice(0, 200),
-  });
-}
+export function useHoleLockActions() {
+  const qc = useQueryClient();
+  const { eventId, rawEvent } = useBoardData();
 
-export function clearHoleAudit() {
-  write({ locked: cache.locked, audit: [] });
+  const lock = async (hole: number, actor = "Admin", note?: string) => {
+    if (eventId == null) return;
+    const before = rawEvent?.locked_holes ?? [];
+    if (before.includes(hole)) return;
+    patchCache(qc, eventId, [...before, hole].sort((a, b) => a - b));
+    pushAudit({ hole, action: "lock", actor, at: Date.now(), note });
+    try {
+      const { locked_holes } = await lockHoleRequest(eventId, hole);
+      patchCache(qc, eventId, locked_holes);
+    } catch (err) {
+      patchCache(qc, eventId, before);
+      const msg = err instanceof ApiError && err.status === 403
+        ? "Admin only"
+        : `Failed to lock hole ${hole}`;
+      toast.error(msg);
+    }
+  };
+
+  const unlock = async (hole: number, actor = "Admin", note?: string) => {
+    if (eventId == null) return;
+    const before = rawEvent?.locked_holes ?? [];
+    if (!before.includes(hole)) return;
+    patchCache(qc, eventId, before.filter((h) => h !== hole));
+    pushAudit({ hole, action: "unlock", actor, at: Date.now(), note });
+    try {
+      const { locked_holes } = await unlockHoleRequest(eventId, hole);
+      patchCache(qc, eventId, locked_holes);
+    } catch (err) {
+      patchCache(qc, eventId, before);
+      const msg = err instanceof ApiError && err.status === 403
+        ? "Admin only"
+        : `Failed to unlock hole ${hole}`;
+      toast.error(msg);
+    }
+  };
+
+  return { lock, unlock };
 }
