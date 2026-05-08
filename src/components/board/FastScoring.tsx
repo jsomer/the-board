@@ -350,3 +350,32 @@ function fmtToPar(n: number) {
   if (n === 0) return "E";
   return n > 0 ? `+${n}` : `${n}`;
 }
+
+function SaveIndicator({ status, flash }: { status: "idle" | "saving" | "saved" | "error"; flash: boolean }) {
+  const isSaving = status === "saving";
+  const isError = status === "error";
+  const showSaved = flash && !isError && !isSaving;
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1 rounded-full border border-border bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
+        isError
+          ? "border-down/40 text-down"
+          : showSaved
+            ? "text-money"
+            : isSaving
+              ? "text-foreground"
+              : "text-muted-foreground",
+      )}
+    >
+      {isError ? (
+        <CloudOff className="h-3 w-3" />
+      ) : isSaving ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        <Cloud className="h-3 w-3" />
+      )}
+      {isError ? "Retry" : isSaving ? "Saving" : showSaved ? "Saved" : "Auto-save"}
+    </span>
+  );
+}
