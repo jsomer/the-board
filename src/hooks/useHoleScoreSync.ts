@@ -74,7 +74,10 @@ function persistQueue(eventId: number, q: Map<string, PendingEntry>) {
   }
 }
 
-export function useHoleScoreSync(eventId: number | null) {
+export function useHoleScoreSync(
+  eventId: number | null,
+  resolveGroupId?: (playerId: number) => number | null | undefined,
+) {
   const qc = useQueryClient();
   // Persistent queue keyed by `${playerId}:${hole}`
   const queueRef = useRef<Map<string, PendingEntry>>(new Map());
