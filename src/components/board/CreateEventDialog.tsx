@@ -236,7 +236,7 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
       if (!prev.has(id)) return prev;
       const next = new Map(prev);
       const cur = next.get(id)!;
-      next.set(id, { ...cur, quota: value });
+      next.set(id, { ...cur, quota: value, loading: false, source: cur.source ?? "override" });
       return next;
     });
   };
