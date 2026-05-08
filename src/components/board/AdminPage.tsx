@@ -11,10 +11,11 @@ import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { CreateEventDialog } from "./CreateEventDialog";
+import { GroupsManager } from "./GroupsManager";
 import { useHoleLocks, useHoleLockActions, clearHoleAudit } from "@/lib/board/holeLocks";
 import { getMe, getStoredIsAdmin, isAuthenticated } from "@/lib/api/auth";
 
-type Tab = "event" | "players" | "payouts" | "locks" | "ticker";
+type Tab = "event" | "players" | "groups" | "payouts" | "locks" | "ticker";
 
 export function AdminPage() {
   const { players: seedPlayers, teams: seedTeams, event: seedEvent, tickerItems: seedTicker, rawEvent, eventId, isMock } = useBoardData();
