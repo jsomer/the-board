@@ -135,7 +135,7 @@ export function AdminPage() {
 
       {/* Tabs */}
       <nav className="mx-4 mt-4 flex gap-1 rounded-2xl border border-border bg-surface/70 p-1">
-        {(["event", "players", "payouts", "ticker"] as Tab[]).map((t) => (
+        {(["event", "players", "payouts", "locks", "ticker"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
