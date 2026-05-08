@@ -481,7 +481,7 @@ function LocksPanel({ currentHole, onChange }: { currentHole: number; onChange: 
         title={
           <span className="flex items-center gap-1.5">
             <History className="h-3 w-3" /> Audit trail
-          </span> as unknown as string
+          </span>
         }
         action={
           audit.length > 0 ? (
