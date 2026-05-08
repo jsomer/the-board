@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Settings2, Play, Pause, RefreshCcw, DollarSign, Flag, Users,
   Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio, History,
@@ -9,7 +10,9 @@ import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { CreateEventDialog } from "./CreateEventDialog";
 import { useHoleLocks, useHoleLockActions, clearHoleAudit } from "@/lib/board/holeLocks";
+import { getMe, getStoredIsAdmin, isAuthenticated } from "@/lib/api/auth";
 
 type Tab = "event" | "players" | "payouts" | "locks" | "ticker";
 
@@ -18,6 +21,17 @@ export function AdminPage() {
   const [tab, setTab] = useState<Tab>("event");
   const [live, setLive] = useState(true);
   const [locked, setLocked] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+
+  const meQ = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: getMe,
+    enabled: isAuthenticated(),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const isAdmin = Boolean(meQ.data?.isAdmin) || getStoredIsAdmin();
+
   const [name, setName] = useState(seedEvent.name);
   const [format, setFormat] = useState(seedEvent.format);
   const [hole, setHole] = useState(seedEvent.hole);
@@ -123,25 +137,37 @@ export function AdminPage() {
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Settings2 className="h-4 w-4 text-primary" />
             <h1 className="text-xl font-extrabold tracking-tight">Admin Console</h1>
           </div>
-          <button
-            onClick={() => { setLive((v) => !v); flash(); }}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all",
-              live
-                ? "bg-money/15 text-money shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--money)_40%,transparent)]"
-                : "bg-surface-2 text-muted-foreground",
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary-foreground shadow-card"
+              >
+                <Plus className="h-3 w-3" /> New event
+              </button>
             )}
-          >
-            <Radio className={cn("h-3 w-3", live && "animate-pulse")} />
-            {live ? "Live" : "Paused"}
-          </button>
+            <button
+              onClick={() => { setLive((v) => !v); flash(); }}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all",
+                live
+                  ? "bg-money/15 text-money shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--money)_40%,transparent)]"
+                  : "bg-surface-2 text-muted-foreground",
+              )}
+            >
+              <Radio className={cn("h-3 w-3", live && "animate-pulse")} />
+              {live ? "Live" : "Paused"}
+            </button>
+          </div>
         </div>
       </header>
+
+      {isAdmin && <CreateEventDialog open={showCreate} onOpenChange={setShowCreate} />}
 
       {/* Quick stats */}
       <section className="mx-4 grid grid-cols-3 gap-2">
