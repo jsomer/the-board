@@ -14,7 +14,7 @@ import { useHoleLocks, lockHole, unlockHole, clearHoleAudit } from "@/lib/board/
 type Tab = "event" | "players" | "payouts" | "locks" | "ticker";
 
 export function AdminPage() {
-  const { players: seedPlayers, teams: seedTeams, event: seedEvent, tickerItems: seedTicker } = useBoardData();
+  const { players: seedPlayers, teams: seedTeams, event: seedEvent, tickerItems: seedTicker, rawEvent } = useBoardData();
   const [tab, setTab] = useState<Tab>("event");
   const [live, setLive] = useState(true);
   const [locked, setLocked] = useState(false);
@@ -250,7 +250,9 @@ export function AdminPage() {
           </Panel>
         )}
 
-        {tab === "locks" && <LocksPanel currentHole={hole} onChange={flash} />}
+        {tab === "locks" && (
+          <LocksPanel currentHole={rawEvent?.players?.[0]?.holeScores?.filter((s) => s > 0).length || hole} onChange={flash} />
+        )}
 
         {tab === "ticker" && (
           <Panel title="Live Ticker">
