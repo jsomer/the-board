@@ -36,6 +36,8 @@ const SKIN_RESULTS: HoleSkin[] = [
 
 // Course pars per hole (par-72)
 const PARS = [4, 4, 5, 3, 4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 4, 3, 5, 4];
+// Hole yardages (white tees) — mock distances per hole
+const DISTANCES = [402, 388, 521, 168, 415, 376, 196, 538, 431, 410, 182, 549, 433, 369, 421, 154, 506, 447];
 
 const POINTS_BY_OFFSET: Record<number, number> = { [-3]: 12, [-2]: 8, [-1]: 4, 0: 2, 1: 1 };
 
