@@ -32,7 +32,7 @@ export function EventHeader() {
         <ThemeSwitcher />
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-2 px-4">
         <Stat label="Pot" value={`$${event.pot}`} accent="money" />
         <Stat label="Skins" value={`$${event.skinsPot}`} accent="gold" />
         <Stat label="On Course" value={String(onCourse)} accent="muted" icon={<Radio className="h-3 w-3" />} />
