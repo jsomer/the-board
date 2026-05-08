@@ -196,9 +196,18 @@ export function useHoleScoreSync(eventId: number | null) {
         toast.error(msg);
         continue;
       }
-      // Transient — back off
+      // Transient — back off, with attempt cap
       const e = r.entry;
       const attempts = e.attempts + 1;
+      if (attempts >= MAX_ATTEMPTS) {
+        revertCache(qc, eventId, e.playerId, e.holeNumber, e.prevScore);
+        queueRef.current.delete(r.key);
+        permanentFailure = true;
+        toast.error("Save failed after multiple retries", {
+          description: `Hole ${e.holeNumber} reverted. Re-enter when connection is stable.`,
+        });
+        continue;
+      }
       const delay = Math.min(MAX_BACKOFF_MS, 1000 * 2 ** Math.min(attempts, 5));
       queueRef.current.set(r.key, { ...e, attempts, scheduledAt: Date.now() + delay });
       hadError = true;
@@ -266,7 +275,24 @@ export function useHoleScoreSync(eventId: number | null) {
     };
   }, []);
 
-  return { queue, status, savedTick, pendingCount, online };
+  /**
+   * Clear a hole's score locally (used by Undo when there was no prior value).
+   * Skips the network — backend currently has no "delete score" endpoint.
+   */
+  const clear = useCallback(
+    ({ playerId, holeNumber }: { playerId: string | number; holeNumber: number }) => {
+      if (eventId == null) return;
+      const pid = Number(playerId);
+      const key = `${pid}:${holeNumber}`;
+      queueRef.current.delete(key);
+      persistQueue(eventId, queueRef.current);
+      setPendingCount(queueRef.current.size);
+      writeCache(qc, eventId, pid, holeNumber, 0);
+    },
+    [eventId, qc],
+  );
+
+  return { queue, clear, status, savedTick, pendingCount, online };
 }
 
 function writeCache(
