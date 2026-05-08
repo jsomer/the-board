@@ -8,8 +8,9 @@ import {
   type ReactNode,
 } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { listEvents, getEvent, getSideBets, pickActiveEvent } from "@/lib/api/events";
-import { isAuthenticated } from "@/lib/api/auth";
+import { isAuthenticated, logout as apiLogout } from "@/lib/api/auth";
 import type { EventRecord, SideBet, SkinsState } from "@/lib/api/types";
 import {
   derivePlayers,
