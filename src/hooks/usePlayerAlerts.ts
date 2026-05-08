@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useBoardData } from "@/lib/board/context";
+import { getMe } from "@/lib/api/auth";
+import { isAuthenticated } from "@/lib/api/auth";
 import type { Player } from "@/data/board";
 
 const CASH_LINE = 3;
@@ -13,10 +16,19 @@ type Snap = { pos: number; skins: number; projected: number };
  *  - they win a skin (skins count increases),
  *  - they drop off the cash line (were ≤3, now >3).
  *
- * "Me" defaults to the first player until real auth is wired in.
+ * The "me" identity comes from GET /auth/me. If the signed-in user has no
+ * linked player record (e.g. an admin account), no alerts fire. An explicit
+ * `meId` override is supported for testing.
  */
-export function usePlayerAlerts(meId?: string) {
+export function usePlayerAlerts(meIdOverride?: string) {
   const { players } = useBoardData();
+  const meQ = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: getMe,
+    enabled: !meIdOverride && isAuthenticated(),
+    staleTime: 5 * 60_000,
+  });
+  const meId = meIdOverride ?? (meQ.data?.playerId != null ? String(meQ.data.playerId) : null);
   const prev = useRef<Map<string, Snap> | null>(null);
   const armed = useRef(false);
 
