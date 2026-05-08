@@ -122,15 +122,15 @@ export function FastScoring() {
     });
     if (eventId != null) {
       if (lastEntry.prev == null || lastEntry.prev < 1) {
-      // No prior score — clear locally instead of posting an invalid 0.
-      clear({ playerId: lastEntry.pid, holeNumber: lastEntry.hole });
-    } else {
-      queue({
-        playerId: lastEntry.pid,
-        holeNumber: lastEntry.hole,
-        grossScore: lastEntry.prev,
-        prevScore: scores[lastEntry.pid]?.[lastEntry.hole] ?? 0,
-      });
+        clear({ playerId: lastEntry.pid, holeNumber: lastEntry.hole });
+      } else {
+        queue({
+          playerId: lastEntry.pid,
+          holeNumber: lastEntry.hole,
+          grossScore: lastEntry.prev,
+          prevScore: scores[lastEntry.pid]?.[lastEntry.hole] ?? 0,
+        });
+      }
     }
     setLastEntry(null);
   };
