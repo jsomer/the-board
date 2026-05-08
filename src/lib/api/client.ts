@@ -1,8 +1,8 @@
-// JWT-aware fetch wrapper. In dev, requests go through Vite proxy at /api.
-// In production / preview, set VITE_API_BASE_URL.
+// JWT-aware fetch wrapper.
+// VITE_API_BASE_URL overrides at build time; otherwise falls back to the Render API directly.
 
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-export const API_BASE = (RAW_BASE && RAW_BASE.replace(/\/$/, "")) || "/api";
+export const API_BASE = (RAW_BASE && RAW_BASE.replace(/\/$/, "")) || "https://gametracker-api-npr9.onrender.com";
 
 const ACCESS_KEY = "gt_accessToken";
 const REFRESH_KEY = "gt_refreshToken";
