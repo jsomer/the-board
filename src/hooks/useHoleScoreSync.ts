@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { postHoleScore } from "@/lib/api/events";
+import { postGroupHoleScore } from "@/lib/api/groups";
 import { ApiError } from "@/lib/api/client";
 import type { EventRecord } from "@/lib/api/types";
 
