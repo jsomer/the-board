@@ -209,7 +209,7 @@ export function QuotaLeaderboardPage() {
 
         <div className="rounded-2xl border border-border bg-card p-2 shadow-card">
           <div className="grid grid-cols-6 gap-1">
-            {SKIN_RESULTS.map((s) => {
+            {skinResults.map((s) => {
               const player = s.winner ? seedPlayers.find((p) => p.id === s.winner) : null;
               return (
                 <div
