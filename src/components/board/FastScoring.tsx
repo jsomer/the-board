@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Check, Undo2, Flag, Cloud, Zap } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Undo2, Flag, Cloud, CloudOff, Loader2, Zap } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
+import { useHoleScoreSync } from "@/hooks/useHoleScoreSync";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -11,16 +12,20 @@ const DEFAULT_PARS = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 3, 5, 4];
 type Scores = Record<string, Record<number, number | undefined>>;
 
 export function FastScoring() {
-  const { players: seedPlayers, event, rawEvent } = useBoardData();
+  const { players: seedPlayers, event, rawEvent, eventId } = useBoardData();
   const PARS = (rawEvent?.hole_pars && rawEvent.hole_pars.length === 18) ? rawEvent.hole_pars : DEFAULT_PARS;
+  const { queue, status, savedTick } = useHoleScoreSync(eventId);
 
-  const initialScores = (): Scores => {
+  // Derive scores from live event (so optimistic updates + polling reflect here);
+  // fall back to seed data when not authed / mock mode.
+  const scores: Scores = useMemo(() => {
     const map: Scores = {};
     if (rawEvent) {
       for (const p of rawEvent.players) {
-        map[String(p.player_id)] = {};
+        const pid = String(p.player_id);
+        map[pid] = {};
         p.holeScores.forEach((s, i) => {
-          if (s > 0) map[String(p.player_id)][i + 1] = s;
+          if (s > 0) map[pid][i + 1] = s;
         });
       }
       return map;
@@ -31,9 +36,8 @@ export function FastScoring() {
         map[p.id][h] = PARS[h - 1] + (h === p.lastHole?.hole ? p.lastHole.score - p.lastHole.par : 0);
     }
     return map;
-  };
+  }, [rawEvent, seedPlayers, PARS]);
 
-  const [scores, setScores] = useState<Scores>(initialScores);
   const [playerIdx, setPlayerIdx] = useState(0);
   const [hole, setHole] = useState(event.hole);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -44,7 +48,7 @@ export function FastScoring() {
   const par = PARS[hole - 1];
   const current = player ? scores[player.id]?.[hole] : undefined;
 
-  // Quick options anchored to par: -2..+3 with named labels
+  // Quick options anchored to par
   const options = useMemo(() => {
     const make = (offset: number) => {
       const stroke = par + offset;
@@ -54,14 +58,25 @@ export function FastScoring() {
     return [-2, -1, 0, 1, 2, 3].map(make).filter((o) => o.stroke >= 1);
   }, [par]);
 
-  // Auto-save flash + auto-advance
-  const enter = (stroke: number) => {
-    const prev = scores[player.id]?.[hole];
-    setScores((s) => ({ ...s, [player.id]: { ...s[player.id], [hole]: stroke } }));
-    setLastEntry({ pid: player.id, hole, prev });
+  // Flash "Saved" briefly whenever a server confirmation arrives
+  useEffect(() => {
+    if (savedTick === 0) return;
     setSavedFlash(true);
-    window.setTimeout(() => setSavedFlash(false), 700);
-    // Auto-advance to next player; if last player, advance hole
+    const t = window.setTimeout(() => setSavedFlash(false), 900);
+    return () => window.clearTimeout(t);
+  }, [savedTick]);
+
+  const enter = (stroke: number) => {
+    if (!player) return;
+    const prev = scores[player.id]?.[hole];
+    setLastEntry({ pid: player.id, hole, prev });
+    queue({
+      playerId: player.id,
+      holeNumber: hole,
+      grossScore: stroke,
+      prevScore: prev ?? 0,
+    });
+    // Auto-advance
     window.setTimeout(() => {
       if (playerIdx < seedPlayers.length - 1) setPlayerIdx((i) => i + 1);
       else {
@@ -73,10 +88,12 @@ export function FastScoring() {
 
   const undo = () => {
     if (!lastEntry) return;
-    setScores((s) => ({
-      ...s,
-      [lastEntry.pid]: { ...s[lastEntry.pid], [lastEntry.hole]: lastEntry.prev },
-    }));
+    queue({
+      playerId: lastEntry.pid,
+      holeNumber: lastEntry.hole,
+      grossScore: lastEntry.prev ?? 0,
+      prevScore: scores[lastEntry.pid]?.[lastEntry.hole] ?? 0,
+    });
     setLastEntry(null);
   };
 
@@ -132,15 +149,7 @@ export function FastScoring() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "flex items-center gap-1 rounded-full border border-border bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
-                savedFlash ? "text-money" : "text-muted-foreground",
-              )}
-            >
-              <Cloud className="h-3 w-3" />
-              {savedFlash ? "Saved" : "Auto-save"}
-            </span>
+            <SaveIndicator status={status} flash={savedFlash} />
             <ThemeSwitcher />
           </div>
         </div>
@@ -340,4 +349,33 @@ function colorForLabel(label: string) {
 function fmtToPar(n: number) {
   if (n === 0) return "E";
   return n > 0 ? `+${n}` : `${n}`;
+}
+
+function SaveIndicator({ status, flash }: { status: "idle" | "saving" | "saved" | "error"; flash: boolean }) {
+  const isSaving = status === "saving";
+  const isError = status === "error";
+  const showSaved = flash && !isError && !isSaving;
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1 rounded-full border border-border bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
+        isError
+          ? "border-down/40 text-down"
+          : showSaved
+            ? "text-money"
+            : isSaving
+              ? "text-foreground"
+              : "text-muted-foreground",
+      )}
+    >
+      {isError ? (
+        <CloudOff className="h-3 w-3" />
+      ) : isSaving ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        <Cloud className="h-3 w-3" />
+      )}
+      {isError ? "Retry" : isSaving ? "Saving" : showSaved ? "Saved" : "Auto-save"}
+    </span>
+  );
 }
