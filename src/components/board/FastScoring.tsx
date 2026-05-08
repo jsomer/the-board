@@ -149,15 +149,9 @@ export function FastScoring() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "flex items-center gap-1 rounded-full border border-border bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
-                savedFlash ? "text-money" : "text-muted-foreground",
-              )}
-            >
-              <Cloud className="h-3 w-3" />
-              {savedFlash ? "Saved" : "Auto-save"}
-            </span>
+            <SaveIndicator status={status} flash={savedFlash} />
+            <ThemeSwitcher />
+          </div>
             <ThemeSwitcher />
           </div>
         </div>
