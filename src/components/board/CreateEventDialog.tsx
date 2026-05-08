@@ -192,11 +192,51 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
     if (step > 1 && step !== 4) setStep((step - 1) as Step);
   };
 
-  const togglePlayer = (id: number) => {
+  const togglePlayer = (id: number, fallbackQuota: number) => {
+    const isSelected = selectedPlayers.has(id);
+    if (isSelected) {
+      setSelectedPlayers((prev) => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
+      return;
+    }
+    // Optimistic add with fallback quota + loading flag
     setSelectedPlayers((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const next = new Map(prev);
+      next.set(id, { quota: fallbackQuota, loading: true });
+      return next;
+    });
+    // Fetch real quota for this game setup
+    if (gameSetupId != null) {
+      getPlayerGameQuota(id, gameSetupId)
+        .then((res) => {
+          setSelectedPlayers((prev) => {
+            if (!prev.has(id)) return prev;
+            const next = new Map(prev);
+            next.set(id, { quota: res.quota, source: res.source, loading: false });
+            return next;
+          });
+        })
+        .catch(() => {
+          setSelectedPlayers((prev) => {
+            if (!prev.has(id)) return prev;
+            const next = new Map(prev);
+            const cur = next.get(id)!;
+            next.set(id, { ...cur, loading: false });
+            return next;
+          });
+        });
+    }
+  };
+
+  const setPlayerQuota = (id: number, value: number) => {
+    setSelectedPlayers((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Map(prev);
+      const cur = next.get(id)!;
+      next.set(id, { ...cur, quota: value });
       return next;
     });
   };
