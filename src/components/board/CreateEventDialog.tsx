@@ -96,7 +96,7 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
     setGameSetupId(null);
     setCourseId(null);
     setCreatedEvent(null);
-    setSelectedPlayers(new Set());
+    setSelectedPlayers(new Map());
     setError(null);
   }, [open]);
 
