@@ -111,6 +111,8 @@ function Row({ player, pos }: { player: Player; pos: number }) {
           {player.projected > 0 ? `+$${player.projected}` : "—"}
         </div>
       </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
+      </Link>
     </li>
   );
 }
