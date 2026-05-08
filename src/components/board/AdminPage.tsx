@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft, Settings2, Play, Pause, RefreshCcw, DollarSign, Flag, Users,
@@ -14,7 +14,7 @@ import { useHoleLocks, useHoleLockActions, clearHoleAudit } from "@/lib/board/ho
 type Tab = "event" | "players" | "payouts" | "locks" | "ticker";
 
 export function AdminPage() {
-  const { players: seedPlayers, teams: seedTeams, event: seedEvent, tickerItems: seedTicker, rawEvent } = useBoardData();
+  const { players: seedPlayers, teams: seedTeams, event: seedEvent, tickerItems: seedTicker, rawEvent, eventId, isMock } = useBoardData();
   const [tab, setTab] = useState<Tab>("event");
   const [live, setLive] = useState(true);
   const [locked, setLocked] = useState(false);
@@ -28,6 +28,23 @@ export function AdminPage() {
   const [ticker, setTicker] = useState(seedTicker);
   const [draft, setDraft] = useState({ tag: "BIRDIE", text: "" });
   const [savedFlash, setSavedFlash] = useState(false);
+
+  // Re-seed local form state when the upstream data *source* changes
+  // (mock -> live, or a different event loads). We deliberately don't
+  // re-sync on every poll, otherwise in-progress admin edits would be
+  // clobbered every 8 seconds.
+  const sourceKey = `${eventId ?? "none"}:${isMock ? "mock" : "live"}`;
+  const lastSourceRef = useRef(sourceKey);
+  useEffect(() => {
+    if (lastSourceRef.current === sourceKey) return;
+    lastSourceRef.current = sourceKey;
+    setName(seedEvent.name);
+    setFormat(seedEvent.format);
+    setHole(seedEvent.hole);
+    setSkinsPot(seedEvent.skinsPot);
+    setPlayers(seedPlayers);
+    setTicker(seedTicker);
+  }, [sourceKey, seedEvent, seedPlayers, seedTicker]);
 
   const flash = () => {
     setSavedFlash(true);
