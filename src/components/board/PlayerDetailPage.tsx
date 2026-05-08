@@ -1,11 +1,13 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity } from "lucide-react";
+import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity, Ruler, X } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
 
 // Same constants used on the leaderboard so the views stay consistent
 const QUOTAS: Record<string, number> = {
@@ -34,6 +36,8 @@ const SKIN_RESULTS: HoleSkin[] = [
 
 // Course pars per hole (par-72)
 const PARS = [4, 4, 5, 3, 4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 4, 3, 5, 4];
+// Hole yardages (white tees) — mock distances per hole
+const DISTANCES = [402, 388, 521, 168, 415, 376, 196, 538, 431, 410, 182, 549, 433, 369, 421, 154, 506, 447];
 
 const POINTS_BY_OFFSET: Record<number, number> = { [-3]: 12, [-2]: 8, [-1]: 4, 0: 2, 1: 1 };
 
@@ -121,6 +125,14 @@ export function PlayerDetailPage() {
   // Approximate prior projected from movement (each position ≈ ~$20 swing)
   const priorProjected = Math.max(0, player.projected - player.movement * 20);
   const projectedDelta = player.projected - priorProjected;
+
+  // Field-wide hole-by-hole results for distribution + skin attribution
+  const fieldHoles = useMemo(
+    () => seedPlayers.map((p) => ({ player: p, rows: buildHoles(p) })),
+    [seedPlayers],
+  );
+
+  const [openHole, setOpenHole] = useState<number | null>(null);
 
   const jumpToHole = (hole: number) => {
     const el = document.getElementById(`hole-${hole}`);
@@ -368,10 +380,13 @@ export function PlayerDetailPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-2 shadow-card">
-          <NineRow label="OUT" holes={holes.slice(0, 9)} />
+          <NineRow label="OUT" holes={holes.slice(0, 9)} onOpen={setOpenHole} />
           <div className="my-2 h-px bg-border" />
-          <NineRow label="IN" holes={holes.slice(9, 18)} />
+          <NineRow label="IN" holes={holes.slice(9, 18)} onOpen={setOpenHole} />
         </div>
+        <p className="mt-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Tap any hole for details
+        </p>
       </section>
 
       {/* Skins won */}
@@ -414,11 +429,180 @@ export function PlayerDetailPage() {
       </section>
 
       <BottomNav active="cards" />
+
+      <HoleDetailSheet
+        holeNumber={openHole}
+        onClose={() => setOpenHole(null)}
+        playerRow={openHole ? holes[openHole - 1] : null}
+        playerName={player.name}
+        fieldHoles={fieldHoles}
+      />
     </main>
   );
 }
 
-function NineRow({ label, holes }: { label: string; holes: HoleRow[] }) {
+type FieldHoles = { player: Player; rows: HoleRow[] }[];
+
+function HoleDetailSheet({
+  holeNumber, onClose, playerRow, playerName, fieldHoles,
+}: {
+  holeNumber: number | null;
+  onClose: () => void;
+  playerRow: HoleRow | null;
+  playerName: string;
+  fieldHoles: FieldHoles;
+}) {
+  const open = holeNumber !== null && playerRow !== null;
+  const par = playerRow?.par ?? 0;
+  const distance = holeNumber ? DISTANCES[holeNumber - 1] : 0;
+  const skin = holeNumber ? SKIN_RESULTS.find((s) => s.hole === holeNumber) : undefined;
+  const skinWinner = skin?.winner ? fieldHoles.find((f) => f.player.id === skin.winner)?.player : null;
+
+  // Field distribution across all players for this hole
+  const buckets = useMemo(() => {
+    const b = { eagle: 0, birdie: 0, par: 0, bogey: 0, double: 0, unscored: 0 };
+    if (!holeNumber) return b;
+    for (const f of fieldHoles) {
+      const r = f.rows[holeNumber - 1];
+      if (!r || r.score === null) { b.unscored++; continue; }
+      const off = r.toPar ?? 0;
+      if (off <= -2) b.eagle++;
+      else if (off === -1) b.birdie++;
+      else if (off === 0) b.par++;
+      else if (off === 1) b.bogey++;
+      else b.double++;
+    }
+    return b;
+  }, [fieldHoles, holeNumber]);
+
+  const playedCount = buckets.eagle + buckets.birdie + buckets.par + buckets.bogey + buckets.double;
+  const dist: { key: keyof typeof buckets; label: string; tone: string }[] = [
+    { key: "eagle",  label: "Eagle+", tone: "bg-money/80" },
+    { key: "birdie", label: "Birdie", tone: "bg-money/50" },
+    { key: "par",    label: "Par",    tone: "bg-surface-2" },
+    { key: "bogey",  label: "Bogey",  tone: "bg-down/40" },
+    { key: "double", label: "Double+", tone: "bg-down/70" },
+  ];
+
+  return (
+    <Drawer open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DrawerContent className="px-4 pb-6">
+        <DrawerHeader className="px-0 pt-2 text-left">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <DrawerTitle className="text-xl font-extrabold">
+                Hole {holeNumber} <span className="ml-1 text-muted-foreground">·</span>{" "}
+                <span className="text-primary">Par {par}</span>
+              </DrawerTitle>
+              <DrawerDescription className="mt-0.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 text-muted-foreground">
+                  <Ruler className="h-3 w-3" /> {distance} yds
+                </span>
+                <span className="text-muted-foreground/60">·</span>
+                <span className="text-muted-foreground">{playerName}</span>
+              </DrawerDescription>
+            </div>
+            <DrawerClose asChild>
+              <Button variant="ghost" size="icon" aria-label="Close"><X className="h-4 w-4" /></Button>
+            </DrawerClose>
+          </div>
+        </DrawerHeader>
+
+        {/* Player's result on this hole */}
+        {playerRow && (
+          <div className={cn(
+            "rounded-2xl border p-3",
+            playerRow.score === null
+              ? "border-border bg-card"
+              : (playerRow.toPar ?? 0) < 0
+                ? "border-money/30 bg-money/10"
+                : (playerRow.toPar ?? 0) === 0
+                  ? "border-border bg-card"
+                  : "border-down/25 bg-down/5",
+          )}>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Your score</div>
+                <div className="mt-0.5 flex items-baseline gap-2">
+                  <span className="font-tabular text-3xl font-extrabold leading-none">
+                    {playerRow.score ?? "—"}
+                  </span>
+                  {playerRow.score !== null && (
+                    <span className="font-tabular text-sm font-bold text-muted-foreground">
+                      {fmtToPar(playerRow.toPar ?? 0)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Points</div>
+                <div className="mt-0.5 font-tabular text-2xl font-extrabold text-primary">{playerRow.points}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Skin */}
+        <div className="mt-3 flex items-center gap-3 rounded-2xl border border-gold/25 bg-gradient-to-r from-gold/10 via-gold/5 to-transparent p-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/20 text-gold">
+            <Flame className="h-5 w-5" />
+          </span>
+          <div className="flex-1">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Skin</div>
+            <div className="text-sm font-extrabold">
+              {skinWinner
+                ? `${skinWinner.name} won this skin`
+                : skin
+                  ? "Carried — no outright winner"
+                  : "Pending"}
+            </div>
+          </div>
+          {skin && (
+            <div className="font-tabular text-lg font-extrabold text-gold">${skin.value}</div>
+          )}
+        </div>
+
+        {/* Field distribution */}
+        <div className="mt-3">
+          <div className="mb-2 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Field scoring</h3>
+            <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {playedCount}/{fieldHoles.length} played
+            </span>
+          </div>
+          {playedCount === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              No one through this hole yet
+            </div>
+          ) : (
+            <>
+              <div className="flex h-3 w-full overflow-hidden rounded-full border border-border bg-surface-2">
+                {dist.map((d) => {
+                  const v = buckets[d.key];
+                  if (!v) return null;
+                  const pct = (v / playedCount) * 100;
+                  return <div key={d.key} className={cn("h-full", d.tone)} style={{ width: `${pct}%` }} />;
+                })}
+              </div>
+              <ul className="mt-2 grid grid-cols-5 gap-1">
+                {dist.map((d) => (
+                  <li key={d.key} className="flex flex-col items-center rounded-lg border border-border bg-card px-1 py-1.5">
+                    <span className={cn("mb-0.5 h-1.5 w-6 rounded-full", d.tone)} />
+                    <span className="font-tabular text-sm font-extrabold leading-none">{buckets[d.key]}</span>
+                    <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{d.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+function NineRow({ label, holes, onOpen }: { label: string; holes: HoleRow[]; onOpen: (h: number) => void }) {
   const totalScore = holes.reduce((s, h) => s + (h.score ?? 0), 0);
   const totalPar = holes.filter((h) => h.score !== null).reduce((s, h) => s + h.par, 0);
   const totalPts = holes.reduce((s, h) => s + h.points, 0);
@@ -432,24 +616,33 @@ function NineRow({ label, holes }: { label: string; holes: HoleRow[] }) {
       </div>
       <div className="grid grid-cols-9 gap-1">
         {holes.map((h) => (
-          <HoleCell key={h.hole} h={h} />
+          <HoleCell key={h.hole} h={h} onOpen={onOpen} />
         ))}
       </div>
     </div>
   );
 }
 
-function HoleCell({ h }: { h: HoleRow }) {
+function HoleCell({ h, onOpen }: { h: HoleRow; onOpen: (h: number) => void }) {
   const played = h.score !== null;
   const tone = !played
-    ? "border-border bg-surface-2/40 text-muted-foreground/50"
+    ? "border-border bg-surface-2/40 text-muted-foreground/50 hover:bg-surface-2/70"
     : (h.toPar ?? 0) <= -1
-      ? "border-money/30 bg-money/10 text-money"
+      ? "border-money/30 bg-money/10 text-money hover:bg-money/20"
       : (h.toPar ?? 0) === 0
-        ? "border-border bg-card text-foreground"
-        : "border-down/25 bg-down/5 text-down";
+        ? "border-border bg-card text-foreground hover:bg-surface-2/60"
+        : "border-down/25 bg-down/5 text-down hover:bg-down/15";
   return (
-    <div id={`hole-${h.hole}`} className={cn("relative flex flex-col items-center rounded-lg border px-1 py-1.5 scroll-mt-24", tone)}>
+    <button
+      type="button"
+      onClick={() => onOpen(h.hole)}
+      id={`hole-${h.hole}`}
+      aria-label={`Hole ${h.hole} details`}
+      className={cn(
+        "relative flex flex-col items-center rounded-lg border px-1 py-1.5 scroll-mt-24 transition-colors active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        tone,
+      )}
+    >
       <span className="text-[8px] font-bold uppercase tracking-wider opacity-70">H{h.hole}</span>
       <span className="font-tabular text-sm font-extrabold leading-none">
         {played ? h.score : "—"}
@@ -460,7 +653,7 @@ function HoleCell({ h }: { h: HoleRow }) {
       {h.wonSkin && (
         <Flame className="absolute -right-0.5 -top-0.5 h-3 w-3 text-gold drop-shadow" />
       )}
-    </div>
+    </button>
   );
 }
 
