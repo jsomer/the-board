@@ -312,7 +312,7 @@ export function AdminPage() {
 const inputCls =
   "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold text-foreground outline-none placeholder:text-muted-foreground focus:border-primary";
 
-function Panel({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+function Panel({ title, action, children }: { title: React.ReactNode; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-3.5 shadow-card">
       <div className="mb-2.5 flex items-center justify-between">
