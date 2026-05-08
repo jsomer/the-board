@@ -111,6 +111,17 @@ export function PlayerDetailPage() {
   const skinsValue = skinsWon.reduce((sum, h) => sum + h.skinValue, 0);
   const beating = diff > 0;
 
+  // Recent deltas (last 3 played holes, most recent first)
+  const recent = holes.filter((h) => h.score !== null).slice(-3).reverse();
+
+  // Position vs field + payout movement
+  const sorted = [...seedPlayers].sort((a, b) => a.toPar - b.toPar);
+  const position = sorted.findIndex((p) => p.id === player.id) + 1;
+  const fieldSize = sorted.length;
+  // Approximate prior projected from movement (each position ≈ ~$20 swing)
+  const priorProjected = Math.max(0, player.projected - player.movement * 20);
+  const projectedDelta = player.projected - priorProjected;
+
   const jumpToHole = (hole: number) => {
     const el = document.getElementById(`hole-${hole}`);
     if (el) {
