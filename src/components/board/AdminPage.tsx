@@ -250,6 +250,8 @@ export function AdminPage() {
           </Panel>
         )}
 
+        {tab === "locks" && <LocksPanel currentHole={hole} onChange={flash} />}
+
         {tab === "ticker" && (
           <Panel title="Live Ticker">
             <Field label="Tag">
