@@ -179,7 +179,6 @@ function GroupCard({
   ungrouped: { id: number; name: string }[];
   onChanged: () => void;
 }) {
-  const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(group.name);
   const [editHole, setEditHole] = useState<string>(group.start_hole == null ? "" : String(group.start_hole));
