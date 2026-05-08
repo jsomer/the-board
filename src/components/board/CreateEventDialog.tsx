@@ -161,7 +161,9 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
     }
     toast.success("Event created", { description: createdEvent.name });
     onOpenChange(false);
-    navigate({ to: "/", search: { eventId: createdEvent.id } as never });
+    if (typeof window !== "undefined") {
+      window.location.href = `/?eventId=${createdEvent.id}`;
+    }
   };
 
   const canNext: Record<Step, boolean> = {
