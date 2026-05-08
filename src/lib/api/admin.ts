@@ -24,9 +24,18 @@ export function createEvent(payload: CreateEventPayload) {
   return api<EventRecord>("/events", { method: "POST", body: payload });
 }
 
+export interface PlayerQuotaResponse {
+  quota: number;
+  source: "per_game" | "default" | string;
+}
+
+export function getPlayerGameQuota(playerId: number | string, gameSetupId: number | string) {
+  return api<PlayerQuotaResponse>(`/players/${playerId}/game-quota/${gameSetupId}`);
+}
+
 export function updateEvent(
   id: number | string,
-  body: { results_json: { players: EventPlayer[] } } & Record<string, unknown>,
+  body: { results: { players: EventPlayer[] } } & Record<string, unknown>,
 ) {
   return api<EventRecord>(`/events/${id}`, { method: "PUT", body });
 }

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
   createEvent,
+  getPlayerGameQuota,
   listCourses,
   listGameSetups,
   listPlayers,
@@ -60,7 +61,9 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
   const [gameSetupId, setGameSetupId] = useState<number | null>(null);
   const [courseId, setCourseId] = useState<number | null>(null);
   const [createdEvent, setCreatedEvent] = useState<EventRecord | null>(null);
-  const [selectedPlayers, setSelectedPlayers] = useState<Set<number>>(new Set());
+  const [selectedPlayers, setSelectedPlayers] = useState<
+    Map<number, { quota: number; source?: string; loading?: boolean }>
+  >(new Map());
   const [error, setError] = useState<string | null>(null);
 
   const setups = useQuery({
@@ -93,7 +96,7 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
     setGameSetupId(null);
     setCourseId(null);
     setCreatedEvent(null);
-    setSelectedPlayers(new Set());
+    setSelectedPlayers(new Map());
     setError(null);
   }, [open]);
 
@@ -133,16 +136,20 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
       const list = players.data ?? [];
       const roster: EventPlayer[] = list
         .filter((p) => selectedPlayers.has(p.id))
-        .map((p) => ({
-          player_id: p.id,
-          name: `${p.first_name} ${p.last_name}`.trim(),
-          quota: p.game_points_needed ?? 0,
-          achieved: 0,
-          adjustment: 0,
-          holeScores: [],
-        }));
+        .map((p) => {
+          const sel = selectedPlayers.get(p.id)!;
+          return {
+            player_id: p.id,
+            name: `${p.first_name} ${p.last_name}`.trim(),
+            quota: Number.isFinite(sel.quota) ? sel.quota : 0,
+            achieved: 0,
+            winnings: 0,
+            adjustment: 0,
+            holeScores: [],
+          } as EventPlayer;
+        });
       return updateEvent(createdEvent.id, {
-        results_json: { players: roster },
+        results: { players: roster },
       });
     },
     onSuccess: () => {
@@ -185,11 +192,51 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
     if (step > 1 && step !== 4) setStep((step - 1) as Step);
   };
 
-  const togglePlayer = (id: number) => {
+  const togglePlayer = (id: number, fallbackQuota: number) => {
+    const isSelected = selectedPlayers.has(id);
+    if (isSelected) {
+      setSelectedPlayers((prev) => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
+      return;
+    }
+    // Optimistic add with fallback quota + loading flag
     setSelectedPlayers((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const next = new Map(prev);
+      next.set(id, { quota: fallbackQuota, loading: true });
+      return next;
+    });
+    // Fetch real quota for this game setup
+    if (gameSetupId != null) {
+      getPlayerGameQuota(id, gameSetupId)
+        .then((res) => {
+          setSelectedPlayers((prev) => {
+            if (!prev.has(id)) return prev;
+            const next = new Map(prev);
+            next.set(id, { quota: res.quota, source: res.source, loading: false });
+            return next;
+          });
+        })
+        .catch(() => {
+          setSelectedPlayers((prev) => {
+            if (!prev.has(id)) return prev;
+            const next = new Map(prev);
+            const cur = next.get(id)!;
+            next.set(id, { ...cur, loading: false });
+            return next;
+          });
+        });
+    }
+  };
+
+  const setPlayerQuota = (id: number, value: number) => {
+    setSelectedPlayers((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Map(prev);
+      const cur = next.get(id)!;
+      next.set(id, { ...cur, quota: value });
       return next;
     });
   };
@@ -325,28 +372,64 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
             {players.error && <ErrorRow message={readErr(players.error, "Failed to load players")} />}
             <div className="max-h-72 space-y-1.5 overflow-y-auto">
               {players.data?.map((p) => {
-                const checked = selectedPlayers.has(p.id);
+                const sel = selectedPlayers.get(p.id);
+                const checked = sel != null;
+                const fallback = p.game_points_needed ?? 0;
                 return (
-                  <button
+                  <div
                     key={p.id}
-                    type="button"
-                    onClick={() => togglePlayer(p.id)}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-lg border bg-surface px-3 py-2 text-left text-sm",
-                      checked ? "border-primary ring-1 ring-primary" : "border-border hover:bg-surface-2",
+                      "flex items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-2 text-sm",
+                      checked ? "border-primary ring-1 ring-primary" : "border-border",
                     )}
                   >
-                    <div>
+                    <button
+                      type="button"
+                      onClick={() => togglePlayer(p.id, fallback)}
+                      className="flex-1 text-left"
+                    >
                       <div className="font-bold">
                         {p.first_name} {p.last_name}
                       </div>
                       <div className="text-[11px] text-muted-foreground">
                         {p.usga_handicap != null ? `Hcp ${p.usga_handicap}` : "—"}
-                        {p.game_points_needed != null && ` · Quota ${p.game_points_needed}`}
+                        {sel?.source && ` · ${sel.source === "per_game" ? "Per-game quota" : "Default quota"}`}
                       </div>
-                    </div>
-                    {checked ? <Check className="h-4 w-4 text-primary" /> : <Plus className="h-4 w-4 text-muted-foreground" />}
-                  </button>
+                    </button>
+                    {checked ? (
+                      <div className="flex items-center gap-1.5">
+                        {sel.loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                        <Label htmlFor={`q-${p.id}`} className="text-[11px] text-muted-foreground">
+                          Quota
+                        </Label>
+                        <Input
+                          id={`q-${p.id}`}
+                          type="number"
+                          min={0}
+                          value={sel.quota}
+                          onChange={(e) => setPlayerQuota(p.id, Number(e.target.value) || 0)}
+                          className="h-7 w-16 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => togglePlayer(p.id, fallback)}
+                          className="rounded p-1 text-muted-foreground hover:text-destructive"
+                          aria-label="Remove"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => togglePlayer(p.id, fallback)}
+                        className="rounded p-1 text-muted-foreground hover:text-primary"
+                        aria-label="Add"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
