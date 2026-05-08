@@ -1,5 +1,9 @@
 import { api, setTokens, clearTokens, getAccessToken } from "./client";
-import type { AuthTokens } from "./types";
+import type { AuthTokens, MeResponse } from "./types";
+
+export function getMe() {
+  return api<MeResponse>("/auth/me");
+}
 
 export async function login(email: string, password: string): Promise<AuthTokens> {
   const tokens = await api<AuthTokens>("/auth/login", {
