@@ -152,8 +152,6 @@ export function FastScoring() {
             <SaveIndicator status={status} flash={savedFlash} />
             <ThemeSwitcher />
           </div>
-            <ThemeSwitcher />
-          </div>
         </div>
       </header>
 
