@@ -31,7 +31,8 @@ const H2H_MATCHUPS: Omit<H2H, "a" | "b">[] = [
 ];
 
 export function MatchupsPage() {
-  const { players: seedPlayers, teams: seedTeams, event } = useBoardData();
+  const { players: seedPlayers, teams: seedTeams, event: boardEvent } = useBoardData();
+  const event = boardEvent;
   const [mode, setMode] = useState<Mode>("team");
 
   const eaglesPlayers = seedPlayers.filter((p) => p.team === "Eagles");

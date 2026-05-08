@@ -86,7 +86,8 @@ function buildHoles(p: Player): HoleRow[] {
 }
 
 export function PlayerDetailPage() {
-  const { players: seedPlayers, event } = useBoardData();
+  const { players: seedPlayers, event: boardEvent } = useBoardData();
+  const event = boardEvent;
   const { playerId } = useParams({ from: "/player/$playerId" });
   const player = seedPlayers.find((p) => p.id === playerId);
 

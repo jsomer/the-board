@@ -55,7 +55,8 @@ type Row = {
 };
 
 export function QuotaLeaderboardPage() {
-  const { players: seedPlayers, event } = useBoardData();
+  const { players: seedPlayers, event: boardEvent } = useBoardData();
+  const event = boardEvent;
   const rows: Row[] = useMemo(() => {
     const skinsByPid = SKIN_RESULTS.reduce<Record<string, { count: number; value: number }>>((acc, s) => {
       if (!s.winner) return acc;
