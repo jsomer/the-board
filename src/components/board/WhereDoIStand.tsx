@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Flame, TrendingUp, TrendingDown, Zap, Trophy, AlertTriangle, ChevronDown } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
+import { useMe } from "@/hooks/useMe";
+import { skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 import { cn } from "@/lib/utils";
 
-// Mirror of leaderboard skin results (mock fallback)
-type HoleSkin = { hole: number; winner: string | null; value: number };
+// Mock fallback used only when the API has not produced a SkinsState yet
 const FALLBACK_SKINS: HoleSkin[] = [
   { hole: 1,  winner: "p1", value: 5 },
   { hole: 2,  winner: null, value: 5 },
@@ -42,24 +43,18 @@ export function WhereDoIStand({
   pars?: number[];
 }) {
   const { players: livePlayers, skins: skinsState, rawEvent } = useBoardData();
+  const { meId: authMeId } = useMe();
   const [expanded, setExpanded] = useState(false);
 
-  // "me" — first player as a sensible default (TODO: wire to current user)
-  const ME_ID = livePlayers[0]?.id ?? "p1";
+  // Resolve "me" from /auth/me; fall back to first player only if unknown
+  const ME_ID = authMeId ?? livePlayers[0]?.id ?? "p1";
   const me = livePlayers.find((p) => p.id === ME_ID) ?? livePlayers[0];
 
   // Build per-hole skin records: from real SkinsState if present, else fallback
   const skinResults: HoleSkin[] = useMemo(() => {
-    if (skinsState && rawEvent) {
-      const perHoleBase = skinsState.participants.length > 0 ? skinsState.pot / 18 : 5;
-      return skinsState.holes.map((h) => ({
-        hole: h.hole,
-        winner: h.winner != null ? String(h.winner) : null,
-        value: Math.round((h.carryIn + 1) * perHoleBase),
-      }));
-    }
-    return FALLBACK_SKINS;
-  }, [skinsState, rawEvent]);
+    const fromApi = skinRowsFromState(skinsState);
+    return fromApi.length > 0 ? fromApi : FALLBACK_SKINS;
+  }, [skinsState]);
 
   // ── Live skin lead on the current hole ─────────────────────
   const liveLead = useMemo(() => {

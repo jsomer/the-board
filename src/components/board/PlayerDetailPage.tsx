@@ -3,40 +3,17 @@ import { Link, useParams, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity, Ruler, X } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
+import { quotasFromEvent, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 
-// Same constants used on the leaderboard so the views stay consistent
-const QUOTAS: Record<string, number> = {
-  p1: 36, p2: 34, p3: 32, p4: 30, p5: 30, p6: 28, p7: 26, p8: 24,
-};
+// Default quota when nothing is on the event yet
+const DEFAULT_QUOTA = 30;
 
-type HoleSkin = { hole: number; winner: string | null; value: number };
-const SKIN_RESULTS: HoleSkin[] = [
-  { hole: 1,  winner: "p1", value: 5 },
-  { hole: 2,  winner: null, value: 5 },
-  { hole: 3,  winner: "p3", value: 10 },
-  { hole: 4,  winner: "p2", value: 5 },
-  { hole: 5,  winner: null, value: 5 },
-  { hole: 6,  winner: "p1", value: 10 },
-  { hole: 7,  winner: "p2", value: 5 },
-  { hole: 8,  winner: null, value: 5 },
-  { hole: 9,  winner: "p1", value: 10 },
-  { hole: 10, winner: "p3", value: 5 },
-  { hole: 11, winner: null, value: 5 },
-  { hole: 12, winner: "p2", value: 10 },
-  { hole: 13, winner: "p1", value: 5 },
-  { hole: 14, winner: null, value: 5 },
-  { hole: 15, winner: "p3", value: 10 },
-  { hole: 16, winner: "p1", value: 5 },
-];
-
-// Course pars per hole (par-72)
-const PARS = [4, 4, 5, 3, 4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 4, 3, 5, 4];
-// Hole yardages (white tees) — mock distances per hole
+// Hole yardages (white tees) — mock distances per hole (no API field for this yet)
 const DISTANCES = [402, 388, 521, 168, 415, 376, 196, 538, 431, 410, 182, 549, 433, 369, 421, 154, 506, 447];
 
 const POINTS_BY_OFFSET: Record<number, number> = { [-3]: 12, [-2]: 8, [-1]: 4, 0: 2, 1: 1 };
@@ -53,47 +30,64 @@ function rngFor(id: string) {
 
 type HoleRow = { hole: number; par: number; score: number | null; toPar: number | null; points: number; wonSkin: boolean; skinValue: number };
 
-function buildHoles(p: Player): HoleRow[] {
-  const rand = rngFor(p.id);
-  // Bias scoring so totals roughly match p.toPar across p.thru holes
-  const targetTotal = p.toPar;
-  const offsets: number[] = [];
-  let running = 0;
-  for (let i = 0; i < p.thru; i++) {
-    const remaining = p.thru - i;
-    const need = targetTotal - running;
-    const avg = need / remaining;
-    const r = rand();
-    let off: number;
-    if (avg <= -0.5) off = r < 0.6 ? -1 : 0;
-    else if (avg >= 0.5) off = r < 0.55 ? 1 : r < 0.85 ? 0 : 2;
-    else off = r < 0.18 ? -1 : r < 0.7 ? 0 : r < 0.92 ? 1 : 2;
-    offsets.push(off);
-    running += off;
-  }
-  // Snap last hole to hit target exactly
-  if (p.thru > 0) offsets[p.thru - 1] += targetTotal - running;
+const DEFAULT_PARS = [4, 4, 5, 3, 4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 4, 3, 5, 4];
 
-  return PARS.map((par, idx) => {
+/** Build hole rows. Uses real per-hole gross scores when present, else falls
+ * back to a deterministic distribution that hits p.toPar across p.thru holes. */
+function buildHoles(
+  p: Player,
+  pars: number[],
+  skinResults: HoleSkin[],
+  realScores?: number[],
+): HoleRow[] {
+  let offsets: (number | null)[];
+  if (realScores && realScores.some((s) => s > 0)) {
+    offsets = pars.map((par, idx) => {
+      const s = realScores[idx];
+      return s && s > 0 ? s - par : null;
+    });
+  } else {
+    const rand = rngFor(p.id);
+    const targetTotal = p.toPar;
+    const synth: number[] = [];
+    let running = 0;
+    for (let i = 0; i < p.thru; i++) {
+      const remaining = p.thru - i;
+      const need = targetTotal - running;
+      const avg = need / remaining;
+      const r = rand();
+      let off: number;
+      if (avg <= -0.5) off = r < 0.6 ? -1 : 0;
+      else if (avg >= 0.5) off = r < 0.55 ? 1 : r < 0.85 ? 0 : 2;
+      else off = r < 0.18 ? -1 : r < 0.7 ? 0 : r < 0.92 ? 1 : 2;
+      synth.push(off);
+      running += off;
+    }
+    if (p.thru > 0) synth[p.thru - 1] += targetTotal - running;
+    offsets = pars.map((_par, idx) => (idx < p.thru ? synth[idx] : null));
+  }
+
+  return pars.map((par, idx) => {
     const hole = idx + 1;
-    const played = idx < p.thru;
-    const off = played ? offsets[idx] : null;
-    const score = played ? par + (off as number) : null;
-    const points = played ? (POINTS_BY_OFFSET[off as number] ?? 0) : 0;
-    const skin = SKIN_RESULTS.find((s) => s.hole === hole);
+    const off = offsets[idx];
+    const played = off != null;
+    const score = played ? par + off : null;
+    const points = played ? (POINTS_BY_OFFSET[off] ?? 0) : 0;
+    const skin = skinResults.find((s) => s.hole === hole);
     const wonSkin = !!skin && skin.winner === p.id;
-    return {
-      hole, par, score, toPar: off, points,
-      wonSkin, skinValue: skin?.value ?? 0,
-    };
+    return { hole, par, score, toPar: off, points, wonSkin, skinValue: skin?.value ?? 0 };
   });
 }
 
 export function PlayerDetailPage() {
-  const { players: seedPlayers, event: boardEvent } = useBoardData();
+  const { players: seedPlayers, event: boardEvent, rawEvent, skins } = useBoardData();
   const event = boardEvent;
   const { playerId } = useParams({ from: "/player/$playerId" });
   const player = seedPlayers.find((p) => p.id === playerId);
+
+  const pars = rawEvent?.hole_pars && rawEvent.hole_pars.length === 18 ? rawEvent.hole_pars : DEFAULT_PARS;
+  const skinResults = useMemo(() => skinRowsFromState(skins), [skins]);
+  const quotas = useMemo(() => quotasFromEvent(rawEvent), [rawEvent]);
 
   if (!player) {
     return (
@@ -105,9 +99,15 @@ export function PlayerDetailPage() {
     );
   }
 
-  const holes = useMemo(() => buildHoles(player), [player]);
-  const totalPoints = holes.reduce((sum, h) => sum + h.points, 0);
-  const quota = QUOTAS[player.id] ?? 30;
+  const realPlayer = rawEvent?.players.find((rp) => String(rp.player_id) === player.id);
+  const holes = useMemo(
+    () => buildHoles(player, pars, skinResults, realPlayer?.holeScores),
+    [player, pars, skinResults, realPlayer],
+  );
+  const totalPoints = realPlayer
+    ? realPlayer.achieved + (realPlayer.adjustment ?? 0)
+    : holes.reduce((sum, h) => sum + h.points, 0);
+  const quota = realPlayer?.quota ?? quotas[player.id] ?? DEFAULT_QUOTA;
   const pacedTarget = Math.max(1, Math.round((quota * player.thru) / 18));
   const diff = totalPoints - pacedTarget;
   const pace = player.thru > 0 ? Math.round((totalPoints / player.thru) * 18) : 0;
@@ -122,14 +122,16 @@ export function PlayerDetailPage() {
   const sorted = [...seedPlayers].sort((a, b) => a.toPar - b.toPar);
   const position = sorted.findIndex((p) => p.id === player.id) + 1;
   const fieldSize = sorted.length;
-  // Approximate prior projected from movement (each position ≈ ~$20 swing)
   const priorProjected = Math.max(0, player.projected - player.movement * 20);
   const projectedDelta = player.projected - priorProjected;
 
   // Field-wide hole-by-hole results for distribution + skin attribution
   const fieldHoles = useMemo(
-    () => seedPlayers.map((p) => ({ player: p, rows: buildHoles(p) })),
-    [seedPlayers],
+    () => seedPlayers.map((p) => {
+      const rp = rawEvent?.players.find((x) => String(x.player_id) === p.id);
+      return { player: p, rows: buildHoles(p, pars, skinResults, rp?.holeScores) };
+    }),
+    [seedPlayers, pars, skinResults, rawEvent],
   );
 
   const [openHole, setOpenHole] = useState<number | null>(null);
@@ -436,6 +438,7 @@ export function PlayerDetailPage() {
         playerRow={openHole ? holes[openHole - 1] : null}
         playerName={player.name}
         fieldHoles={fieldHoles}
+        skinResults={skinResults}
       />
     </main>
   );
@@ -444,18 +447,19 @@ export function PlayerDetailPage() {
 type FieldHoles = { player: Player; rows: HoleRow[] }[];
 
 function HoleDetailSheet({
-  holeNumber, onClose, playerRow, playerName, fieldHoles,
+  holeNumber, onClose, playerRow, playerName, fieldHoles, skinResults,
 }: {
   holeNumber: number | null;
   onClose: () => void;
   playerRow: HoleRow | null;
   playerName: string;
   fieldHoles: FieldHoles;
+  skinResults: HoleSkin[];
 }) {
   const open = holeNumber !== null && playerRow !== null;
   const par = playerRow?.par ?? 0;
   const distance = holeNumber ? DISTANCES[holeNumber - 1] : 0;
-  const skin = holeNumber ? SKIN_RESULTS.find((s) => s.hole === holeNumber) : undefined;
+  const skin = holeNumber ? skinResults.find((s) => s.hole === holeNumber) : undefined;
   const skinWinner = skin?.winner ? fieldHoles.find((f) => f.player.id === skin.winner)?.player : null;
 
   // Field distribution across all players for this hole

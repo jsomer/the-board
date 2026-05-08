@@ -1,41 +1,15 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Target, Flame, TrendingUp, TrendingDown, Minus, Flag, Trophy } from "lucide-react";
+import { ArrowLeft, Flame, TrendingUp, TrendingDown, Minus, Flag, Trophy } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
+import { quotasFromEvent, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
-// Quota points per stroke vs par (Stableford-style)
-//   Eagle = 8, Birdie = 4, Par = 2, Bogey = 1, Double+ = 0
-const POINTS_BY_OFFSET: Record<number, number> = { [-2]: 8, [-1]: 4, 0: 2, 1: 1 };
-
-// Each player has a quota (target points to "make their number")
-const QUOTAS: Record<string, number> = {
-  p1: 36, p2: 34, p3: 32, p4: 30, p5: 30, p6: 28, p7: 26, p8: 24,
-};
-
-// Per-hole skin winners (id of player or null = carry/open)
-type HoleSkin = { hole: number; winner: string | null; value: number };
-const SKIN_RESULTS: HoleSkin[] = [
-  { hole: 1,  winner: "p1", value: 5 },
-  { hole: 2,  winner: null, value: 5 },
-  { hole: 3,  winner: "p3", value: 10 },
-  { hole: 4,  winner: "p2", value: 5 },
-  { hole: 5,  winner: null, value: 5 },
-  { hole: 6,  winner: "p1", value: 10 },
-  { hole: 7,  winner: "p2", value: 5 },
-  { hole: 8,  winner: null, value: 5 },
-  { hole: 9,  winner: "p1", value: 10 },
-  { hole: 10, winner: "p3", value: 5 },
-  { hole: 11, winner: null, value: 5 },
-  { hole: 12, winner: "p2", value: 10 },
-  { hole: 13, winner: "p1", value: 5 },
-  { hole: 14, winner: null, value: 5 },
-  { hole: 15, winner: "p3", value: 10 },
-  { hole: 16, winner: "p1", value: 5 },
-];
+// Fallback quota when the event doesn't list this player (mock-data path only)
+const DEFAULT_QUOTA = 30;
 
 function pointsFor(p: Player): number {
   // Approximate: average points-per-hole based on toPar across thru
@@ -55,10 +29,14 @@ type Row = {
 };
 
 export function QuotaLeaderboardPage() {
-  const { players: seedPlayers, event: boardEvent } = useBoardData();
+  const { players: seedPlayers, event: boardEvent, rawEvent, skins } = useBoardData();
   const event = boardEvent;
+
+  const quotas = useMemo(() => quotasFromEvent(rawEvent), [rawEvent]);
+  const skinResults: HoleSkin[] = useMemo(() => skinRowsFromState(skins), [skins]);
+
   const rows: Row[] = useMemo(() => {
-    const skinsByPid = SKIN_RESULTS.reduce<Record<string, { count: number; value: number }>>((acc, s) => {
+    const skinsByPid = skinResults.reduce<Record<string, { count: number; value: number }>>((acc, s) => {
       if (!s.winner) return acc;
       acc[s.winner] = acc[s.winner] ?? { count: 0, value: 0 };
       acc[s.winner].count += 1;
@@ -68,31 +46,33 @@ export function QuotaLeaderboardPage() {
 
     return seedPlayers
       .map<Row>((p) => {
-        const points = pointsFor(p);
-        const quota = QUOTAS[p.id] ?? 30;
+        // Prefer real per-player numbers from the event when available
+        const ep = rawEvent?.players.find((rp) => String(rp.player_id) === p.id);
+        const points = ep ? ep.achieved + (ep.adjustment ?? 0) : pointsFor(p);
+        const quota = ep?.quota ?? quotas[p.id] ?? DEFAULT_QUOTA;
         const pace = p.thru > 0 ? Math.round((points / p.thru) * 18) : 0;
         const s = skinsByPid[p.id] ?? { count: 0, value: 0 };
         return {
           player: p,
           points,
           quota,
-          diff: points - Math.round((quota * p.thru) / 18),  // diff vs paced quota
+          diff: points - Math.round((quota * p.thru) / 18),
           pace,
           skinsWon: s.count,
           skinsValue: s.value,
         };
       })
       .sort((a, b) => b.diff - a.diff || b.points - a.points);
-  }, []);
+  }, [seedPlayers, rawEvent, quotas, skinResults]);
 
   const skinWinners = useMemo(() => {
-    return SKIN_RESULTS.filter((s) => s.winner).map((s) => ({
-      ...s,
-      player: seedPlayers.find((p) => p.id === s.winner)!,
-    }));
-  }, []);
+    return skinResults
+      .filter((s) => s.winner)
+      .map((s) => ({ ...s, player: seedPlayers.find((p) => p.id === s.winner)! }))
+      .filter((s) => s.player);
+  }, [skinResults, seedPlayers]);
 
-  const carries = SKIN_RESULTS.filter((s) => !s.winner);
+  const carries = skinResults.filter((s) => !s.winner);
 
   return (
     <main className="mx-auto min-h-screen max-w-xl pb-28">
@@ -229,7 +209,7 @@ export function QuotaLeaderboardPage() {
 
         <div className="rounded-2xl border border-border bg-card p-2 shadow-card">
           <div className="grid grid-cols-6 gap-1">
-            {SKIN_RESULTS.map((s) => {
+            {skinResults.map((s) => {
               const player = s.winner ? seedPlayers.find((p) => p.id === s.winner) : null;
               return (
                 <div
