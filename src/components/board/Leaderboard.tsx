@@ -64,15 +64,16 @@ function Row({ player, pos, highlighted }: { player: Player; pos: number; highli
   const teamColor = player.team === "Eagles" ? "bg-money/80" : "bg-bubble/80";
 
   return (
-    <li>
+    <li id={`lb-row-${player.id}`} className="scroll-mt-24">
       <Link
         to="/player/$playerId"
         params={{ playerId: String(player.id) }}
         aria-label={`Open scorecard for ${player.name}`}
         className={cn(
-          "group relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-surface px-3 py-2.5 shadow-card transition-colors hover:bg-surface/80 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          "group relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-surface px-3 py-2.5 shadow-card transition-all hover:bg-surface/80 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           isLeader && "gradient-leader border-money/40",
           player.bubble && !isLeader && "gradient-pressure border-bubble/40",
+          highlighted && "ring-2 ring-primary ring-offset-2 ring-offset-background animate-pulse",
         )}
       >
       {/* Position */}
