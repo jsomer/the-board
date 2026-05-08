@@ -375,8 +375,152 @@ export function FastScoring() {
         </p>
       </section>
 
+      <RoundDrawer
+        open={roundOpen}
+        onOpenChange={setRoundOpen}
+        playerName={player.name}
+        playerTeam={player.team}
+        pars={PARS}
+        scores={scores[player.id] ?? {}}
+        lockedHoles={lockedHoles}
+        currentHole={hole}
+        onJump={(h) => {
+          setHole(h);
+          setRoundOpen(false);
+        }}
+        onClear={(h) => {
+          if (lockedHoles.includes(h)) {
+            toast.error(`Hole ${h} is locked`);
+            return;
+          }
+          const prev = scores[player.id]?.[h];
+          setLastEntry({ pid: player.id, hole: h, prev });
+          setLocalScores((m) => {
+            const cur = { ...(m[player.id] ?? {}) };
+            delete cur[h];
+            return { ...m, [player.id]: cur };
+          });
+          if (eventId != null) clear({ playerId: player.id, holeNumber: h });
+        }}
+      />
+
       <BottomNav active="score" />
     </main>
+  );
+}
+
+function RoundDrawer({
+  open,
+  onOpenChange,
+  playerName,
+  playerTeam,
+  pars,
+  scores,
+  lockedHoles,
+  currentHole,
+  onJump,
+  onClear,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  playerName: string;
+  playerTeam: string;
+  pars: number[];
+  scores: Record<number, number | undefined>;
+  lockedHoles: number[];
+  currentHole: number;
+  onJump: (h: number) => void;
+  onClear: (h: number) => void;
+}) {
+  const played = pars.filter((_, i) => scores[i + 1] != null).length;
+  const totalScore = pars.reduce((s, _, i) => s + (scores[i + 1] ?? 0), 0);
+  const totalToPar = pars.reduce(
+    (s, p, i) => (scores[i + 1] != null ? s + ((scores[i + 1] as number) - p) : s),
+    0,
+  );
+
+  const renderNine = (start: number, label: string) => {
+    const slice = pars.slice(start, start + 9);
+    const nineScore = slice.reduce((s, _, i) => s + (scores[start + i + 1] ?? 0), 0);
+    const nineToPar = slice.reduce(
+      (s, p, i) => (scores[start + i + 1] != null ? s + ((scores[start + i + 1] as number) - p) : s),
+      0,
+    );
+    return (
+      <div className="mt-3">
+        <div className="mb-1.5 flex items-center justify-between px-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+          <span className="font-tabular text-[11px] font-bold text-muted-foreground">
+            {nineScore || "—"} {nineScore ? `(${fmtToPar(nineToPar)})` : ""}
+          </span>
+        </div>
+        <div className="grid grid-cols-9 gap-1">
+          {slice.map((par, i) => {
+            const h = start + i + 1;
+            const score = scores[h];
+            const off = score != null ? score - par : null;
+            const isCurrent = h === currentHole;
+            const lk = lockedHoles.includes(h);
+            const tone =
+              off == null
+                ? "bg-surface-2/40 text-muted-foreground/70"
+                : off <= -1
+                  ? "bg-money/15 text-money"
+                  : off === 0
+                    ? "bg-surface-2 text-foreground"
+                    : "bg-down/10 text-down";
+            return (
+              <button
+                key={h}
+                type="button"
+                onClick={() => onJump(h)}
+                onDoubleClick={() => score != null && onClear(h)}
+                title={score != null ? "Tap to edit · double-tap to clear" : "Tap to score"}
+                className={cn(
+                  "relative flex h-14 flex-col items-center justify-center rounded-lg border text-foreground transition-all active:scale-95",
+                  isCurrent ? "border-primary shadow-[0_0_0_2px_color-mix(in_oklab,var(--primary)_40%,transparent)]" : "border-border",
+                  tone,
+                )}
+              >
+                <span className="text-[8px] font-bold uppercase tracking-wider opacity-70">H{h}·{par}</span>
+                <span className="font-tabular text-base font-extrabold leading-none">
+                  {score ?? "—"}
+                </span>
+                {off != null && (
+                  <span className="font-tabular text-[9px] font-bold opacity-70">{fmtToPar(off)}</span>
+                )}
+                {lk && <Lock className="absolute right-0.5 top-0.5 h-2.5 w-2.5 text-bubble" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="max-h-[90vh]">
+        <DrawerHeader className="flex flex-row items-start justify-between gap-3 text-left">
+          <div className="min-w-0 flex-1">
+            <DrawerTitle className="truncate text-base font-extrabold">{playerName}'s round</DrawerTitle>
+            <DrawerDescription className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {playerTeam} · {played}/18 holes · {totalScore || "—"} {played ? `(${fmtToPar(totalToPar)})` : ""}
+            </DrawerDescription>
+          </div>
+          <DrawerClose className="rounded-full bg-surface-2 p-1.5 text-muted-foreground hover:text-foreground">
+            <X className="h-4 w-4" />
+          </DrawerClose>
+        </DrawerHeader>
+        <div className="overflow-y-auto px-4 pb-6">
+          {renderNine(0, "Front 9 · Out")}
+          {renderNine(9, "Back 9 · In")}
+          <p className="mt-3 text-center text-[10px] text-muted-foreground">
+            Tap a hole to jump &amp; edit · double-tap to clear
+          </p>
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
