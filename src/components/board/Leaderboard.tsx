@@ -13,6 +13,31 @@ function fmtPar(n: number) {
 export function Leaderboard() {
   const { players } = useBoardData();
   const sorted = [...players].sort((a, b) => a.toPar - b.toPar);
+
+  // Restore selection state when returning from a player scorecard.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  useEffect(() => {
+    let id: string | null = null;
+    try { id = sessionStorage.getItem("board:lastPlayerId"); } catch {}
+    if (!id) return;
+    setSelectedId(id);
+    // Scroll the row into view after layout settles, without fighting router scrollRestoration.
+    const t = window.setTimeout(() => {
+      const el = document.getElementById(`lb-row-${id}`);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const offscreen = rect.top < 80 || rect.bottom > window.innerHeight - 120;
+        if (offscreen) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 120);
+    // Clear highlight after a brief moment so it acts as a focus cue, not permanent state.
+    const clear = window.setTimeout(() => {
+      setSelectedId(null);
+      try { sessionStorage.removeItem("board:lastPlayerId"); } catch {}
+    }, 2400);
+    return () => { window.clearTimeout(t); window.clearTimeout(clear); };
+  }, []);
+
   return (
     <section className="px-4">
       <div className="mb-2 flex items-center justify-between">
@@ -26,14 +51,14 @@ export function Leaderboard() {
 
       <ol className="space-y-1.5">
         {sorted.map((p, i) => (
-          <Row key={p.id} player={p} pos={i + 1} />
+          <Row key={p.id} player={p} pos={i + 1} highlighted={p.id === selectedId} />
         ))}
       </ol>
     </section>
   );
 }
 
-function Row({ player, pos }: { player: Player; pos: number }) {
+function Row({ player, pos, highlighted }: { player: Player; pos: number; highlighted?: boolean }) {
   const isLeader = pos === 1;
   const cashLine = pos <= 3;
   const teamColor = player.team === "Eagles" ? "bg-money/80" : "bg-bubble/80";
