@@ -69,6 +69,10 @@ export function useBoardData(): BoardData {
       error: null,
       isMock: true,
       eventId: null,
+      lastUpdatedAt: null,
+      isFetching: false,
+      refresh: () => {},
+      logout: () => {},
     };
   }
   return v;
