@@ -241,6 +241,11 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
     });
   };
 
+  const quotasLoading = useMemo(
+    () => Array.from(selectedPlayers.values()).some((s) => s.loading),
+    [selectedPlayers],
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
