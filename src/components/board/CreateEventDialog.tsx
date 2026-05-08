@@ -61,7 +61,9 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
   const [gameSetupId, setGameSetupId] = useState<number | null>(null);
   const [courseId, setCourseId] = useState<number | null>(null);
   const [createdEvent, setCreatedEvent] = useState<EventRecord | null>(null);
-  const [selectedPlayers, setSelectedPlayers] = useState<Set<number>>(new Set());
+  const [selectedPlayers, setSelectedPlayers] = useState<
+    Map<number, { quota: number; source?: string; loading?: boolean }>
+  >(new Map());
   const [error, setError] = useState<string | null>(null);
 
   const setups = useQuery({
