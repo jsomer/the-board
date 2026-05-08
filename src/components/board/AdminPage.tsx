@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Settings2, Play, Pause, RefreshCcw, DollarSign, Flag, Users,
-  Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio, History,
+  Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio,
 } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { CreateEventDialog } from "./CreateEventDialog";
 import { useHoleLocks, useHoleLockActions, clearHoleAudit } from "@/lib/board/holeLocks";
+import { getMe, getStoredIsAdmin, isAuthenticated } from "@/lib/api/auth";
 
 type Tab = "event" | "players" | "payouts" | "locks" | "ticker";
 
