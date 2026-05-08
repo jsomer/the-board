@@ -12,4 +12,16 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  vite: {
+    server: {
+      proxy: {
+        "/api": {
+          target: "https://gametracker-api-npr9.onrender.com",
+          changeOrigin: true,
+          secure: true,
+          rewrite: (p) => p.replace(/^\/api/, ""),
+        },
+      },
+    },
+  },
 });
