@@ -597,6 +597,72 @@ function HoleDetailSheet({
             </>
           )}
         </div>
+
+        {/* All players on this hole */}
+        <div className="mt-3">
+          <div className="mb-2 flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-primary" />
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">All players</h3>
+            <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Hole {holeNumber}
+            </span>
+          </div>
+          <ul className="max-h-64 space-y-1 overflow-y-auto rounded-2xl border border-border bg-card p-1.5 shadow-card">
+            {[...fieldHoles]
+              .map((f) => ({ p: f.player, row: holeNumber ? f.rows[holeNumber - 1] : null }))
+              .sort((a, b) => {
+                const av = a.row?.score ?? Infinity;
+                const bv = b.row?.score ?? Infinity;
+                return av - bv;
+              })
+              .map(({ p, row }) => {
+                const isMe = p.name === playerName;
+                const isWinner = !!skinWinner && p.id === skinWinner.id;
+                const off = row?.toPar ?? 0;
+                const played = row && row.score !== null;
+                const tone = !played
+                  ? "text-muted-foreground"
+                  : off < 0 ? "text-money" : off === 0 ? "text-foreground" : "text-down";
+                const label = !played ? "—" : off <= -2 ? "Eagle" : off === -1 ? "Birdie" : off === 0 ? "Par" : off === 1 ? "Bogey" : "Double";
+                return (
+                  <li
+                    key={p.id}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-xl border px-2.5 py-2",
+                      isMe ? "border-primary/40 bg-primary/5" : "border-transparent",
+                    )}
+                  >
+                    <span className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-lg text-[11px] font-extrabold",
+                      p.team === "Eagles" ? "bg-primary/15 text-primary" : "bg-bubble/15 text-bubble",
+                    )}>
+                      {p.initials}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-[13px] font-bold">{p.name}</span>
+                        {isMe && (
+                          <span className="rounded-md bg-primary/15 px-1 py-px text-[8px] font-bold uppercase tracking-wider text-primary">You</span>
+                        )}
+                        {isWinner && <Flame className="h-3 w-3 shrink-0 text-gold" />}
+                      </div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {p.team} · {played ? `${row!.points} pts` : "Not played"}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={cn("font-tabular text-lg font-extrabold leading-none", tone)}>
+                        {played ? row!.score : "—"}
+                      </div>
+                      <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                        {played ? `${label} · ${fmtToPar(off)}` : "Pending"}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+          </ul>
+        </div>
       </DrawerContent>
     </Drawer>
   );
