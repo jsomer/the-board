@@ -95,7 +95,13 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
     } catch {
       /* noop */
     }
-    throw new ApiError(res.status, res.statusText || `HTTP ${res.status}`, detail);
+    const message =
+      (detail != null && typeof detail === "object" && "error" in detail
+        ? String((detail as { error: unknown }).error)
+        : null) ??
+      res.statusText ||
+      `HTTP ${res.status}`;
+    throw new ApiError(res.status, message, detail);
   }
 
   if (res.status === 204) return undefined as T;
