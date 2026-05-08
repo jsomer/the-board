@@ -372,28 +372,64 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
             {players.error && <ErrorRow message={readErr(players.error, "Failed to load players")} />}
             <div className="max-h-72 space-y-1.5 overflow-y-auto">
               {players.data?.map((p) => {
-                const checked = selectedPlayers.has(p.id);
+                const sel = selectedPlayers.get(p.id);
+                const checked = sel != null;
+                const fallback = p.game_points_needed ?? 0;
                 return (
-                  <button
+                  <div
                     key={p.id}
-                    type="button"
-                    onClick={() => togglePlayer(p.id)}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-lg border bg-surface px-3 py-2 text-left text-sm",
-                      checked ? "border-primary ring-1 ring-primary" : "border-border hover:bg-surface-2",
+                      "flex items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-2 text-sm",
+                      checked ? "border-primary ring-1 ring-primary" : "border-border",
                     )}
                   >
-                    <div>
+                    <button
+                      type="button"
+                      onClick={() => togglePlayer(p.id, fallback)}
+                      className="flex-1 text-left"
+                    >
                       <div className="font-bold">
                         {p.first_name} {p.last_name}
                       </div>
                       <div className="text-[11px] text-muted-foreground">
                         {p.usga_handicap != null ? `Hcp ${p.usga_handicap}` : "—"}
-                        {p.game_points_needed != null && ` · Quota ${p.game_points_needed}`}
+                        {sel?.source && ` · ${sel.source === "per_game" ? "Per-game quota" : "Default quota"}`}
                       </div>
-                    </div>
-                    {checked ? <Check className="h-4 w-4 text-primary" /> : <Plus className="h-4 w-4 text-muted-foreground" />}
-                  </button>
+                    </button>
+                    {checked ? (
+                      <div className="flex items-center gap-1.5">
+                        {sel.loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                        <Label htmlFor={`q-${p.id}`} className="text-[11px] text-muted-foreground">
+                          Quota
+                        </Label>
+                        <Input
+                          id={`q-${p.id}`}
+                          type="number"
+                          min={0}
+                          value={sel.quota}
+                          onChange={(e) => setPlayerQuota(p.id, Number(e.target.value) || 0)}
+                          className="h-7 w-16 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => togglePlayer(p.id, fallback)}
+                          className="rounded p-1 text-muted-foreground hover:text-destructive"
+                          aria-label="Remove"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => togglePlayer(p.id, fallback)}
+                        className="rounded p-1 text-muted-foreground hover:text-primary"
+                        aria-label="Add"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
