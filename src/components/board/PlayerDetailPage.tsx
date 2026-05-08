@@ -604,7 +604,7 @@ function HoleDetailSheet({
             <Trophy className="h-4 w-4 text-primary" />
             <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">All players</h3>
             <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Hole {holeNumber}
+              {playedCount} of {fieldHoles.length} completed hole {holeNumber}
             </span>
           </div>
           <ul className="max-h-64 space-y-1 overflow-y-auto rounded-2xl border border-border bg-card p-1.5 shadow-card">
