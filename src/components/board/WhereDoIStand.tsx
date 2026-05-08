@@ -255,7 +255,7 @@ export function WhereDoIStand({
               Carries · {carries} open
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {SKIN_RESULTS.filter((s) => !s.winner).map((s) => (
+              {skinResults.filter((s) => !s.winner).map((s) => (
                 <span
                   key={s.hole}
                   className={cn(
