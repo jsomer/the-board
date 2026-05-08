@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Loader2, Plus, X } from "lucide-react";
 import {
