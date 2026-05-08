@@ -38,13 +38,17 @@ function Row({ player, pos }: { player: Player; pos: number }) {
   const teamColor = player.team === "Eagles" ? "bg-money/80" : "bg-bubble/80";
 
   return (
-    <li
-      className={cn(
-        "relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-surface px-3 py-2.5 shadow-card",
-        isLeader && "gradient-leader border-money/40",
-        player.bubble && !isLeader && "gradient-pressure border-bubble/40",
-      )}
-    >
+    <li>
+      <Link
+        to="/player/$playerId"
+        params={{ playerId: String(player.id) }}
+        aria-label={`Open scorecard for ${player.name}`}
+        className={cn(
+          "group relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-surface px-3 py-2.5 shadow-card transition-colors hover:bg-surface/80 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          isLeader && "gradient-leader border-money/40",
+          player.bubble && !isLeader && "gradient-pressure border-bubble/40",
+        )}
+      >
       {/* Position */}
       <div className="flex w-8 flex-col items-center">
         <span className={cn(
