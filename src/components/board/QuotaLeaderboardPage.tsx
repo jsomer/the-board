@@ -29,10 +29,14 @@ type Row = {
 };
 
 export function QuotaLeaderboardPage() {
-  const { players: seedPlayers, event: boardEvent } = useBoardData();
+  const { players: seedPlayers, event: boardEvent, rawEvent, skins } = useBoardData();
   const event = boardEvent;
+
+  const quotas = useMemo(() => quotasFromEvent(rawEvent), [rawEvent]);
+  const skinResults: HoleSkin[] = useMemo(() => skinRowsFromState(skins), [skins]);
+
   const rows: Row[] = useMemo(() => {
-    const skinsByPid = SKIN_RESULTS.reduce<Record<string, { count: number; value: number }>>((acc, s) => {
+    const skinsByPid = skinResults.reduce<Record<string, { count: number; value: number }>>((acc, s) => {
       if (!s.winner) return acc;
       acc[s.winner] = acc[s.winner] ?? { count: 0, value: 0 };
       acc[s.winner].count += 1;
@@ -42,31 +46,33 @@ export function QuotaLeaderboardPage() {
 
     return seedPlayers
       .map<Row>((p) => {
-        const points = pointsFor(p);
-        const quota = QUOTAS[p.id] ?? 30;
+        // Prefer real per-player numbers from the event when available
+        const ep = rawEvent?.players.find((rp) => String(rp.player_id) === p.id);
+        const points = ep ? ep.achieved + (ep.adjustment ?? 0) : pointsFor(p);
+        const quota = ep?.quota ?? quotas[p.id] ?? DEFAULT_QUOTA;
         const pace = p.thru > 0 ? Math.round((points / p.thru) * 18) : 0;
         const s = skinsByPid[p.id] ?? { count: 0, value: 0 };
         return {
           player: p,
           points,
           quota,
-          diff: points - Math.round((quota * p.thru) / 18),  // diff vs paced quota
+          diff: points - Math.round((quota * p.thru) / 18),
           pace,
           skinsWon: s.count,
           skinsValue: s.value,
         };
       })
       .sort((a, b) => b.diff - a.diff || b.points - a.points);
-  }, []);
+  }, [seedPlayers, rawEvent, quotas, skinResults]);
 
   const skinWinners = useMemo(() => {
-    return SKIN_RESULTS.filter((s) => s.winner).map((s) => ({
-      ...s,
-      player: seedPlayers.find((p) => p.id === s.winner)!,
-    }));
-  }, []);
+    return skinResults
+      .filter((s) => s.winner)
+      .map((s) => ({ ...s, player: seedPlayers.find((p) => p.id === s.winner)! }))
+      .filter((s) => s.player);
+  }, [skinResults, seedPlayers]);
 
-  const carries = SKIN_RESULTS.filter((s) => !s.winner);
+  const carries = skinResults.filter((s) => !s.winner);
 
   return (
     <main className="mx-auto min-h-screen max-w-xl pb-28">
