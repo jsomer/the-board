@@ -116,9 +116,16 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <BoardDataProvider>
+        <AlertsBridge />
         <Outlet />
         <Toaster position="top-center" />
       </BoardDataProvider>
     </QueryClientProvider>
   );
 }
+
+function AlertsBridge() {
+  usePlayerAlerts();
+  return null;
+}
+
