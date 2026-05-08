@@ -117,6 +117,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <BoardDataProvider>
         <Outlet />
+        <Toaster position="top-center" />
       </BoardDataProvider>
     </QueryClientProvider>
   );
