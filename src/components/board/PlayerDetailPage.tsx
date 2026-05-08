@@ -380,10 +380,13 @@ export function PlayerDetailPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-2 shadow-card">
-          <NineRow label="OUT" holes={holes.slice(0, 9)} />
+          <NineRow label="OUT" holes={holes.slice(0, 9)} onOpen={setOpenHole} />
           <div className="my-2 h-px bg-border" />
-          <NineRow label="IN" holes={holes.slice(9, 18)} />
+          <NineRow label="IN" holes={holes.slice(9, 18)} onOpen={setOpenHole} />
         </div>
+        <p className="mt-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Tap any hole for details
+        </p>
       </section>
 
       {/* Skins won */}
