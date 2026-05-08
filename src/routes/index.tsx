@@ -5,6 +5,8 @@ import { TeamScoreboard } from "@/components/board/TeamScoreboard";
 import { SkinsStrip } from "@/components/board/SkinsStrip";
 import { Leaderboard } from "@/components/board/Leaderboard";
 import { BottomNav } from "@/components/board/BottomNav";
+import { PullToRefresh } from "@/components/board/PullToRefresh";
+import { useBoardData } from "@/lib/board/context";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -19,16 +21,19 @@ export const Route = createFileRoute("/")({
 });
 
 function LiveBoardPage() {
+  const { refresh, isFetching } = useBoardData();
   return (
-    <main className="mx-auto min-h-screen max-w-xl pb-28">
-      <EventHeader />
-      <Ticker />
-      <div className="space-y-4 pt-4">
-        <TeamScoreboard />
-        <SkinsStrip />
-        <Leaderboard />
-      </div>
-      <BottomNav active="board" />
-    </main>
+    <PullToRefresh onRefresh={refresh} isRefreshing={isFetching}>
+      <main className="mx-auto min-h-screen max-w-xl pb-28">
+        <EventHeader />
+        <Ticker />
+        <div className="space-y-4 pt-4">
+          <TeamScoreboard />
+          <SkinsStrip />
+          <Leaderboard />
+        </div>
+        <BottomNav active="board" />
+      </main>
+    </PullToRefresh>
   );
 }
