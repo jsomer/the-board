@@ -1,12 +1,22 @@
 import { api } from "./client";
 import type { EventRecord, SideBet } from "./types";
 
-export function listEvents() {
-  return api<EventRecord[]>("/events");
+function unwrapEvent(raw: Record<string, unknown>): EventRecord {
+  const nested = raw.results_json as { players?: unknown } | null | undefined;
+  return {
+    ...(raw as unknown as EventRecord),
+    players: Array.isArray(nested?.players) ? nested.players : [],
+  };
 }
 
-export function getEvent(id: number | string) {
-  return api<EventRecord>(`/events/${id}`);
+export async function listEvents(): Promise<EventRecord[]> {
+  const rows = await api<Record<string, unknown>[]>("/events");
+  return rows.map(unwrapEvent);
+}
+
+export async function getEvent(id: number | string): Promise<EventRecord> {
+  const raw = await api<Record<string, unknown>>(`/events/${id}`);
+  return unwrapEvent(raw);
 }
 
 export function getSideBets(id: number | string) {
@@ -46,11 +56,7 @@ export function unlockHoleRequest(eventId: number | string, hole: number) {
 
 export function pickActiveEvent(events: EventRecord[]): EventRecord | null {
   if (!events.length) return null;
-  // Prefer active, then draft, then highest id
+  // Prefer most recent draft; fall back to most recent final
   const sorted = [...events].sort((a, b) => b.id - a.id);
-  return (
-    sorted.find((e) => e.status === "active") ??
-    sorted.find((e) => e.status === "draft") ??
-    sorted[0]
-  );
+  return sorted.find((e) => e.status === "draft") ?? sorted[0];
 }

@@ -1,7 +1,7 @@
 // Real GameTracker API types
 
-export type ScoringType = "stableford" | "stroke" | "net_stroke";
-export type EventStatus = "draft" | "active" | "completed";
+export type ScoringType = "stableford" | "gross_stroke" | "net_stroke";
+export type EventStatus = "draft" | "final";
 
 export interface EventPlayer {
   player_id: string | number;
