@@ -1,41 +1,15 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Target, Flame, TrendingUp, TrendingDown, Minus, Flag, Trophy } from "lucide-react";
+import { ArrowLeft, Flame, TrendingUp, TrendingDown, Minus, Flag, Trophy } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
+import { quotasFromEvent, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
-// Quota points per stroke vs par (Stableford-style)
-//   Eagle = 8, Birdie = 4, Par = 2, Bogey = 1, Double+ = 0
-const POINTS_BY_OFFSET: Record<number, number> = { [-2]: 8, [-1]: 4, 0: 2, 1: 1 };
-
-// Each player has a quota (target points to "make their number")
-const QUOTAS: Record<string, number> = {
-  p1: 36, p2: 34, p3: 32, p4: 30, p5: 30, p6: 28, p7: 26, p8: 24,
-};
-
-// Per-hole skin winners (id of player or null = carry/open)
-type HoleSkin = { hole: number; winner: string | null; value: number };
-const SKIN_RESULTS: HoleSkin[] = [
-  { hole: 1,  winner: "p1", value: 5 },
-  { hole: 2,  winner: null, value: 5 },
-  { hole: 3,  winner: "p3", value: 10 },
-  { hole: 4,  winner: "p2", value: 5 },
-  { hole: 5,  winner: null, value: 5 },
-  { hole: 6,  winner: "p1", value: 10 },
-  { hole: 7,  winner: "p2", value: 5 },
-  { hole: 8,  winner: null, value: 5 },
-  { hole: 9,  winner: "p1", value: 10 },
-  { hole: 10, winner: "p3", value: 5 },
-  { hole: 11, winner: null, value: 5 },
-  { hole: 12, winner: "p2", value: 10 },
-  { hole: 13, winner: "p1", value: 5 },
-  { hole: 14, winner: null, value: 5 },
-  { hole: 15, winner: "p3", value: 10 },
-  { hole: 16, winner: "p1", value: 5 },
-];
+// Fallback quota when the event doesn't list this player (mock-data path only)
+const DEFAULT_QUOTA = 30;
 
 function pointsFor(p: Player): number {
   // Approximate: average points-per-hole based on toPar across thru
