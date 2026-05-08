@@ -429,7 +429,176 @@ export function PlayerDetailPage() {
       </section>
 
       <BottomNav active="cards" />
+
+      <HoleDetailSheet
+        holeNumber={openHole}
+        onClose={() => setOpenHole(null)}
+        playerRow={openHole ? holes[openHole - 1] : null}
+        playerName={player.name}
+        fieldHoles={fieldHoles}
+      />
     </main>
+  );
+}
+
+type FieldHoles = { player: Player; rows: HoleRow[] }[];
+
+function HoleDetailSheet({
+  holeNumber, onClose, playerRow, playerName, fieldHoles,
+}: {
+  holeNumber: number | null;
+  onClose: () => void;
+  playerRow: HoleRow | null;
+  playerName: string;
+  fieldHoles: FieldHoles;
+}) {
+  const open = holeNumber !== null && playerRow !== null;
+  const par = playerRow?.par ?? 0;
+  const distance = holeNumber ? DISTANCES[holeNumber - 1] : 0;
+  const skin = holeNumber ? SKIN_RESULTS.find((s) => s.hole === holeNumber) : undefined;
+  const skinWinner = skin?.winner ? fieldHoles.find((f) => f.player.id === skin.winner)?.player : null;
+
+  // Field distribution across all players for this hole
+  const buckets = useMemo(() => {
+    const b = { eagle: 0, birdie: 0, par: 0, bogey: 0, double: 0, unscored: 0 };
+    if (!holeNumber) return b;
+    for (const f of fieldHoles) {
+      const r = f.rows[holeNumber - 1];
+      if (!r || r.score === null) { b.unscored++; continue; }
+      const off = r.toPar ?? 0;
+      if (off <= -2) b.eagle++;
+      else if (off === -1) b.birdie++;
+      else if (off === 0) b.par++;
+      else if (off === 1) b.bogey++;
+      else b.double++;
+    }
+    return b;
+  }, [fieldHoles, holeNumber]);
+
+  const playedCount = buckets.eagle + buckets.birdie + buckets.par + buckets.bogey + buckets.double;
+  const dist: { key: keyof typeof buckets; label: string; tone: string }[] = [
+    { key: "eagle",  label: "Eagle+", tone: "bg-money/80" },
+    { key: "birdie", label: "Birdie", tone: "bg-money/50" },
+    { key: "par",    label: "Par",    tone: "bg-surface-2" },
+    { key: "bogey",  label: "Bogey",  tone: "bg-down/40" },
+    { key: "double", label: "Double+", tone: "bg-down/70" },
+  ];
+
+  return (
+    <Drawer open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DrawerContent className="px-4 pb-6">
+        <DrawerHeader className="px-0 pt-2 text-left">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <DrawerTitle className="text-xl font-extrabold">
+                Hole {holeNumber} <span className="ml-1 text-muted-foreground">·</span>{" "}
+                <span className="text-primary">Par {par}</span>
+              </DrawerTitle>
+              <DrawerDescription className="mt-0.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 text-muted-foreground">
+                  <Ruler className="h-3 w-3" /> {distance} yds
+                </span>
+                <span className="text-muted-foreground/60">·</span>
+                <span className="text-muted-foreground">{playerName}</span>
+              </DrawerDescription>
+            </div>
+            <DrawerClose asChild>
+              <Button variant="ghost" size="icon" aria-label="Close"><X className="h-4 w-4" /></Button>
+            </DrawerClose>
+          </div>
+        </DrawerHeader>
+
+        {/* Player's result on this hole */}
+        {playerRow && (
+          <div className={cn(
+            "rounded-2xl border p-3",
+            playerRow.score === null
+              ? "border-border bg-card"
+              : (playerRow.toPar ?? 0) < 0
+                ? "border-money/30 bg-money/10"
+                : (playerRow.toPar ?? 0) === 0
+                  ? "border-border bg-card"
+                  : "border-down/25 bg-down/5",
+          )}>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Your score</div>
+                <div className="mt-0.5 flex items-baseline gap-2">
+                  <span className="font-tabular text-3xl font-extrabold leading-none">
+                    {playerRow.score ?? "—"}
+                  </span>
+                  {playerRow.score !== null && (
+                    <span className="font-tabular text-sm font-bold text-muted-foreground">
+                      {fmtToPar(playerRow.toPar ?? 0)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Points</div>
+                <div className="mt-0.5 font-tabular text-2xl font-extrabold text-primary">{playerRow.points}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Skin */}
+        <div className="mt-3 flex items-center gap-3 rounded-2xl border border-gold/25 bg-gradient-to-r from-gold/10 via-gold/5 to-transparent p-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/20 text-gold">
+            <Flame className="h-5 w-5" />
+          </span>
+          <div className="flex-1">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Skin</div>
+            <div className="text-sm font-extrabold">
+              {skinWinner
+                ? `${skinWinner.name} won this skin`
+                : skin
+                  ? "Carried — no outright winner"
+                  : "Pending"}
+            </div>
+          </div>
+          {skin && (
+            <div className="font-tabular text-lg font-extrabold text-gold">${skin.value}</div>
+          )}
+        </div>
+
+        {/* Field distribution */}
+        <div className="mt-3">
+          <div className="mb-2 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Field scoring</h3>
+            <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {playedCount}/{fieldHoles.length} played
+            </span>
+          </div>
+          {playedCount === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              No one through this hole yet
+            </div>
+          ) : (
+            <>
+              <div className="flex h-3 w-full overflow-hidden rounded-full border border-border bg-surface-2">
+                {dist.map((d) => {
+                  const v = buckets[d.key];
+                  if (!v) return null;
+                  const pct = (v / playedCount) * 100;
+                  return <div key={d.key} className={cn("h-full", d.tone)} style={{ width: `${pct}%` }} />;
+                })}
+              </div>
+              <ul className="mt-2 grid grid-cols-5 gap-1">
+                {dist.map((d) => (
+                  <li key={d.key} className="flex flex-col items-center rounded-lg border border-border bg-card px-1 py-1.5">
+                    <span className={cn("mb-0.5 h-1.5 w-6 rounded-full", d.tone)} />
+                    <span className="font-tabular text-sm font-extrabold leading-none">{buckets[d.key]}</span>
+                    <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{d.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
