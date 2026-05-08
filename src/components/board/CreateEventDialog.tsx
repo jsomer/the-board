@@ -52,7 +52,6 @@ function readErr(e: unknown, fallback = "Request failed"): string {
 
 export function CreateEventDialog({ open, onOpenChange }: Props) {
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState("");
   const [eventDate, setEventDate] = useState("");
