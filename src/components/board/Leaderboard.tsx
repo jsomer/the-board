@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, Flame, Minus, Trophy } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useBoardData } from "@/lib/board/context";
@@ -12,6 +13,31 @@ function fmtPar(n: number) {
 export function Leaderboard() {
   const { players } = useBoardData();
   const sorted = [...players].sort((a, b) => a.toPar - b.toPar);
+
+  // Restore selection state when returning from a player scorecard.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  useEffect(() => {
+    let id: string | null = null;
+    try { id = sessionStorage.getItem("board:lastPlayerId"); } catch {}
+    if (!id) return;
+    setSelectedId(id);
+    // Scroll the row into view after layout settles, without fighting router scrollRestoration.
+    const t = window.setTimeout(() => {
+      const el = document.getElementById(`lb-row-${id}`);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const offscreen = rect.top < 80 || rect.bottom > window.innerHeight - 120;
+        if (offscreen) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 120);
+    // Clear highlight after a brief moment so it acts as a focus cue, not permanent state.
+    const clear = window.setTimeout(() => {
+      setSelectedId(null);
+      try { sessionStorage.removeItem("board:lastPlayerId"); } catch {}
+    }, 2400);
+    return () => { window.clearTimeout(t); window.clearTimeout(clear); };
+  }, []);
+
   return (
     <section className="px-4">
       <div className="mb-2 flex items-center justify-between">
@@ -25,28 +51,29 @@ export function Leaderboard() {
 
       <ol className="space-y-1.5">
         {sorted.map((p, i) => (
-          <Row key={p.id} player={p} pos={i + 1} />
+          <Row key={p.id} player={p} pos={i + 1} highlighted={p.id === selectedId} />
         ))}
       </ol>
     </section>
   );
 }
 
-function Row({ player, pos }: { player: Player; pos: number }) {
+function Row({ player, pos, highlighted }: { player: Player; pos: number; highlighted?: boolean }) {
   const isLeader = pos === 1;
   const cashLine = pos <= 3;
   const teamColor = player.team === "Eagles" ? "bg-money/80" : "bg-bubble/80";
 
   return (
-    <li>
+    <li id={`lb-row-${player.id}`} className="scroll-mt-24">
       <Link
         to="/player/$playerId"
         params={{ playerId: String(player.id) }}
         aria-label={`Open scorecard for ${player.name}`}
         className={cn(
-          "group relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-surface px-3 py-2.5 shadow-card transition-colors hover:bg-surface/80 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+          "group relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-surface px-3 py-2.5 shadow-card transition-all hover:bg-surface/80 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
           isLeader && "gradient-leader border-money/40",
           player.bubble && !isLeader && "gradient-pressure border-bubble/40",
+          highlighted && "ring-2 ring-primary ring-offset-2 ring-offset-background animate-pulse",
         )}
       >
       {/* Position */}

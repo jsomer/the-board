@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Link, useParams } from "@tanstack/react-router";
+import { useEffect, useMemo } from "react";
+import { Link, useParams, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
@@ -133,14 +133,37 @@ export function PlayerDetailPage() {
     }
   };
 
+  // Remember which player was opened so the Live Board can highlight + scroll to the row on return.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("board:lastPlayerId", player.id);
+    } catch {}
+  }, [player.id]);
+
+  const router = useRouter();
+  const handleBack = () => {
+    // Prefer browser back so router scrollRestoration restores the leaderboard scroll position.
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.history.back();
+    } else {
+      router.navigate({ to: "/" });
+    }
+  };
+
   return (
     <main className="mx-auto min-h-screen max-w-xl pb-28">
-      {/* Header */}
-      <header className="px-4 pb-3 pt-[max(env(safe-area-inset-top),12px)]">
+      {/* Sticky prominent back bar */}
+      <div className="sticky top-0 z-30 -mx-0 border-b border-border/60 bg-background/85 px-4 pb-2 pt-[max(env(safe-area-inset-top),10px)] backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
-          <Link to="/leaderboard" className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Leaderboard
-          </Link>
+          <button
+            type="button"
+            onClick={handleBack}
+            aria-label="Back to Live Board"
+            className="group inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider text-foreground shadow-card transition-all hover:bg-surface/80 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+            Live Board
+          </button>
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 rounded-full bg-money/15 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-money">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-money" /> Live · H{event.hole}
@@ -148,6 +171,10 @@ export function PlayerDetailPage() {
             <ThemeSwitcher />
           </div>
         </div>
+      </div>
+
+      {/* Header */}
+      <header className="px-4 pb-3 pt-3">
 
         {/* Player hero */}
         <div className={cn(
