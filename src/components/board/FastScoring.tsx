@@ -379,31 +379,56 @@ function fmtToPar(n: number) {
   return n > 0 ? `+${n}` : `${n}`;
 }
 
-function SaveIndicator({ status, flash }: { status: "idle" | "saving" | "saved" | "error"; flash: boolean }) {
+function SaveIndicator({
+  status,
+  flash,
+  pendingCount,
+  online,
+}: {
+  status: "idle" | "saving" | "saved" | "error" | "offline";
+  flash: boolean;
+  pendingCount: number;
+  online: boolean;
+}) {
+  const isOffline = status === "offline" || !online;
   const isSaving = status === "saving";
   const isError = status === "error";
-  const showSaved = flash && !isError && !isSaving;
+  const showSaved = flash && !isError && !isSaving && !isOffline;
+  const queued = pendingCount > 0;
+  const label = isOffline
+    ? queued ? `Offline · ${pendingCount}` : "Offline"
+    : isError
+      ? queued ? `Retry · ${pendingCount}` : "Retry"
+      : isSaving
+        ? "Saving"
+        : showSaved
+          ? "Saved"
+          : queued
+            ? `Queued · ${pendingCount}`
+            : "Auto-save";
   return (
     <span
       className={cn(
         "flex items-center gap-1 rounded-full border border-border bg-surface/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition-colors",
-        isError
-          ? "border-down/40 text-down"
-          : showSaved
-            ? "text-money"
-            : isSaving
-              ? "text-foreground"
-              : "text-muted-foreground",
+        isOffline
+          ? "border-bubble/40 text-bubble"
+          : isError
+            ? "border-down/40 text-down"
+            : showSaved
+              ? "text-money"
+              : isSaving
+                ? "text-foreground"
+                : "text-muted-foreground",
       )}
     >
-      {isError ? (
+      {isOffline || isError ? (
         <CloudOff className="h-3 w-3" />
       ) : isSaving ? (
         <Loader2 className="h-3 w-3 animate-spin" />
       ) : (
         <Cloud className="h-3 w-3" />
       )}
-      {isError ? "Retry" : isSaving ? "Saving" : showSaved ? "Saved" : "Auto-save"}
+      {label}
     </span>
   );
 }
