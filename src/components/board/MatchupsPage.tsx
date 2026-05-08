@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Swords, TrendingUp, TrendingDown, Minus, Flame, ChevronRight, DollarSign, Trophy, Users } from "lucide-react";
-import { players as seedPlayers, teams as seedTeams, event } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
@@ -31,6 +31,7 @@ const H2H_MATCHUPS: Omit<H2H, "a" | "b">[] = [
 ];
 
 export function MatchupsPage() {
+  const { players: seedPlayers, teams: seedTeams, event } = useBoardData();
   const [mode, setMode] = useState<Mode>("team");
 
   const eaglesPlayers = seedPlayers.filter((p) => p.team === "Eagles");

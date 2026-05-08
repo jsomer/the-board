@@ -4,7 +4,7 @@ import {
   ArrowLeft, Settings2, Play, Pause, RefreshCcw, DollarSign, Flag, Users,
   Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio,
 } from "lucide-react";
-import { players as seedPlayers, teams as seedTeams, event as seedEvent, tickerItems as seedTicker } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
@@ -13,6 +13,7 @@ import { ThemeSwitcher } from "./ThemeSwitcher";
 type Tab = "event" | "players" | "payouts" | "ticker";
 
 export function AdminPage() {
+  const { players: seedPlayers, teams: seedTeams, event: seedEvent, tickerItems: seedTicker } = useBoardData();
   const [tab, setTab] = useState<Tab>("event");
   const [live, setLive] = useState(true);
   const [locked, setLocked] = useState(false);
