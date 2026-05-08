@@ -3,40 +3,17 @@ import { Link, useParams, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity, Ruler, X } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
+import { quotasFromEvent, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 
-// Same constants used on the leaderboard so the views stay consistent
-const QUOTAS: Record<string, number> = {
-  p1: 36, p2: 34, p3: 32, p4: 30, p5: 30, p6: 28, p7: 26, p8: 24,
-};
+// Default quota when nothing is on the event yet
+const DEFAULT_QUOTA = 30;
 
-type HoleSkin = { hole: number; winner: string | null; value: number };
-const SKIN_RESULTS: HoleSkin[] = [
-  { hole: 1,  winner: "p1", value: 5 },
-  { hole: 2,  winner: null, value: 5 },
-  { hole: 3,  winner: "p3", value: 10 },
-  { hole: 4,  winner: "p2", value: 5 },
-  { hole: 5,  winner: null, value: 5 },
-  { hole: 6,  winner: "p1", value: 10 },
-  { hole: 7,  winner: "p2", value: 5 },
-  { hole: 8,  winner: null, value: 5 },
-  { hole: 9,  winner: "p1", value: 10 },
-  { hole: 10, winner: "p3", value: 5 },
-  { hole: 11, winner: null, value: 5 },
-  { hole: 12, winner: "p2", value: 10 },
-  { hole: 13, winner: "p1", value: 5 },
-  { hole: 14, winner: null, value: 5 },
-  { hole: 15, winner: "p3", value: 10 },
-  { hole: 16, winner: "p1", value: 5 },
-];
-
-// Course pars per hole (par-72)
-const PARS = [4, 4, 5, 3, 4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 4, 3, 5, 4];
-// Hole yardages (white tees) — mock distances per hole
+// Hole yardages (white tees) — mock distances per hole (no API field for this yet)
 const DISTANCES = [402, 388, 521, 168, 415, 376, 196, 538, 431, 410, 182, 549, 433, 369, 421, 154, 506, 447];
 
 const POINTS_BY_OFFSET: Record<number, number> = { [-3]: 12, [-2]: 8, [-1]: 4, 0: 2, 1: 1 };
