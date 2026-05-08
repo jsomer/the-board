@@ -285,15 +285,17 @@ export function FastScoring() {
         </div>
 
         {/* Giant score buttons */}
-        <div className="mt-4 grid grid-cols-3 gap-2.5">
+        <div className={cn("mt-4 grid grid-cols-3 gap-2.5", isLocked && "opacity-50")}>
           {options.map((o) => {
             const active = current === o.stroke;
             return (
               <button
                 key={o.stroke}
                 onClick={() => enter(o.stroke)}
+                disabled={isLocked}
                 className={cn(
                   "group relative flex h-24 flex-col items-center justify-center rounded-2xl border text-foreground transition-all active:scale-[0.97]",
+                  isLocked && "cursor-not-allowed",
                   active
                     ? "border-transparent bg-gradient-to-b from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] text-primary-foreground shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
                     : "border-border bg-surface hover:bg-surface-2",
@@ -315,6 +317,11 @@ export function FastScoring() {
             );
           })}
         </div>
+        {isLocked && (
+          <div className="mt-2 flex items-center justify-center gap-1.5 rounded-xl border border-bubble/30 bg-bubble/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-bubble">
+            <Lock className="h-3 w-3" /> Hole {hole} finalized — edits disabled
+          </div>
+        )}
 
         {/* Footer row */}
         <div className="mt-4 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
