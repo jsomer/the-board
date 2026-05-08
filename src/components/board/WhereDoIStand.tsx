@@ -41,22 +41,39 @@ export function WhereDoIStand({
   scores?: Record<string, Record<number, number | undefined>>;
   pars?: number[];
 }) {
-  const me = seedPlayers.find((p) => p.id === ME_ID)!;
+  const { players: livePlayers, skins: skinsState, rawEvent } = useBoardData();
   const [expanded, setExpanded] = useState(false);
+
+  // "me" — first player as a sensible default (TODO: wire to current user)
+  const ME_ID = livePlayers[0]?.id ?? "p1";
+  const me = livePlayers.find((p) => p.id === ME_ID) ?? livePlayers[0];
+
+  // Build per-hole skin records: from real SkinsState if present, else fallback
+  const skinResults: HoleSkin[] = useMemo(() => {
+    if (skinsState && rawEvent) {
+      const perHoleBase = skinsState.participants.length > 0 ? skinsState.pot / 18 : 5;
+      return skinsState.holes.map((h) => ({
+        hole: h.hole,
+        winner: h.winner != null ? String(h.winner) : null,
+        value: Math.round((h.carryIn + 1) * perHoleBase),
+      }));
+    }
+    return FALLBACK_SKINS;
+  }, [skinsState, rawEvent]);
 
   // ── Live skin lead on the current hole ─────────────────────
   const liveLead = useMemo(() => {
     if (!scores || !pars) return null;
     const par = pars[currentHole - 1];
-    const entries = seedPlayers
+    const entries = livePlayers
       .map((p) => ({ p, stroke: scores[p.id]?.[currentHole] }))
-      .filter((e): e is { p: typeof seedPlayers[number]; stroke: number } => e.stroke != null);
+      .filter((e): e is { p: typeof livePlayers[number]; stroke: number } => e.stroke != null);
     if (entries.length === 0) return null;
     const lowest = Math.min(...entries.map((e) => e.stroke));
     const leaders = entries.filter((e) => e.stroke === lowest);
     const myStroke = scores[ME_ID]?.[currentHole];
     return { leaders, stroke: lowest, par, tied: leaders.length > 1, myStroke };
-  }, [scores, pars, currentHole]);
+  }, [scores, pars, currentHole, livePlayers, ME_ID]);
 
   // ── Single-line action hint (merged skin lead + next change) ─
   const action = useMemo(() => {
@@ -81,26 +98,30 @@ export function WhereDoIStand({
     const need = stroke - 1;
     if (need < 1) return { tone: "down" as const, headline: lead, detail: `Skin locked` };
     return { tone: "down" as const, headline: lead, detail: `Need ${labelForScore(need, par)} to flip` };
-  }, [liveLead, pars, currentHole]);
+  }, [liveLead, pars, currentHole, ME_ID]);
 
   // ── Skins math ─────────────────────────────────────────────
-  const mySkins = SKIN_RESULTS.filter((s) => s.winner === ME_ID);
+  const mySkins = skinResults.filter((s) => s.winner === ME_ID);
   const mySkinValue = mySkins.reduce((sum, s) => sum + s.value, 0);
 
-  const carryFromBack = SKIN_RESULTS
+  const carryFromBack = skinResults
     .filter((s) => s.hole < currentHole && s.winner === null)
     .reduce((sum, s) => sum + s.value, 0);
 
-  const liveHole = SKIN_RESULTS.find((s) => s.hole === currentHole);
-  const liveValue = liveHole?.value ?? 5;
+  const liveHoleSkin = skinResults.find((s) => s.hole === currentHole);
+  const liveValue = liveHoleSkin?.value ?? 5;
   const livePot = liveValue + carryFromBack;
 
   // ── Quota math ─────────────────────────────────────────────
-  const myPoints = pointsFor(me);
-  const myQuota = QUOTAS[ME_ID] ?? 30;
-  const pacedTarget = Math.max(1, Math.round((myQuota * me.thru) / 18));
+  const realMe = rawEvent?.players.find((p) => String(p.player_id) === ME_ID);
+  const myPoints = realMe
+    ? realMe.achieved + (realMe.adjustment ?? 0)
+    : me ? pointsForFallback(me) : 0;
+  const myQuota = realMe?.quota ?? FALLBACK_QUOTAS[ME_ID] ?? 30;
+  const meThru = me?.thru ?? 0;
+  const pacedTarget = Math.max(1, Math.round((myQuota * meThru) / 18));
   const quotaDiff = myPoints - pacedTarget;
-  const projectedPoints = me.thru > 0 ? Math.round((myPoints / me.thru) * 18) : 0;
+  const projectedPoints = meThru > 0 ? Math.round((myPoints / meThru) * 18) : 0;
   const projectedDiff = projectedPoints - myQuota;
   const beatingQuota = quotaDiff >= 0;
   const pct = Math.min(120, Math.round((myPoints / pacedTarget) * 100));
@@ -124,7 +145,7 @@ export function WhereDoIStand({
     return () => window.clearInterval(id);
   }, []);
 
-  const carries = SKIN_RESULTS.filter((s) => !s.winner).length;
+  const carries = skinResults.filter((s) => !s.winner).length;
 
   const actionToneText =
     action?.tone === "gold" ? "text-gold"
