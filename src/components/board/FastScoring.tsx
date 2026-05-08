@@ -84,12 +84,19 @@ export function FastScoring() {
     }
     const prev = scores[player.id]?.[hole];
     setLastEntry({ pid: player.id, hole, prev });
-    queue({
-      playerId: player.id,
-      holeNumber: hole,
-      grossScore: stroke,
-      prevScore: prev ?? 0,
-    });
+    // Local optimistic write — instant feedback, also covers mock/no-event mode
+    setLocalScores((m) => ({ ...m, [player.id]: { ...(m[player.id] ?? {}), [hole]: stroke } }));
+    if (eventId != null) {
+      queue({
+        playerId: player.id,
+        holeNumber: hole,
+        grossScore: stroke,
+        prevScore: prev ?? 0,
+      });
+    } else {
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 700);
+    }
     // Auto-advance
     window.setTimeout(() => {
       if (playerIdx < seedPlayers.length - 1) setPlayerIdx((i) => i + 1);
@@ -106,7 +113,15 @@ export function FastScoring() {
       toast.error(`Hole ${lastEntry.hole} is locked`);
       return;
     }
-    if (lastEntry.prev == null || lastEntry.prev < 1) {
+    // Revert local overlay
+    setLocalScores((m) => {
+      const cur = { ...(m[lastEntry.pid] ?? {}) };
+      if (lastEntry.prev == null || lastEntry.prev < 1) delete cur[lastEntry.hole];
+      else cur[lastEntry.hole] = lastEntry.prev;
+      return { ...m, [lastEntry.pid]: cur };
+    });
+    if (eventId != null) {
+      if (lastEntry.prev == null || lastEntry.prev < 1) {
       // No prior score — clear locally instead of posting an invalid 0.
       clear({ playerId: lastEntry.pid, holeNumber: lastEntry.hole });
     } else {
