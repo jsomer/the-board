@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Flame, TrendingUp, TrendingDown, Zap, Trophy, AlertTriangle, ChevronDown } from "lucide-react";
-import { players as seedPlayers, event } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
 import { cn } from "@/lib/utils";
 
-// Mirror of leaderboard skin results so the strip is consistent
+// Mirror of leaderboard skin results (mock fallback)
 type HoleSkin = { hole: number; winner: string | null; value: number };
-const SKIN_RESULTS: HoleSkin[] = [
+const FALLBACK_SKINS: HoleSkin[] = [
   { hole: 1,  winner: "p1", value: 5 },
   { hole: 2,  winner: null, value: 5 },
   { hole: 3,  winner: "p3", value: 10 },
@@ -24,13 +24,11 @@ const SKIN_RESULTS: HoleSkin[] = [
   { hole: 16, winner: "p1", value: 5 },
 ];
 
-const ME_ID = "p1";
-
-const QUOTAS: Record<string, number> = {
+const FALLBACK_QUOTAS: Record<string, number> = {
   p1: 36, p2: 34, p3: 32, p4: 30, p5: 30, p6: 28, p7: 26, p8: 24,
 };
 
-function pointsFor(p: { thru: number; toPar: number; skins: number }): number {
+function pointsForFallback(p: { thru: number; toPar: number; skins: number }): number {
   return Math.max(0, p.thru * 2 - p.toPar * 2 + p.skins);
 }
 
