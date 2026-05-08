@@ -18,8 +18,10 @@ export function FastScoring() {
   const PARS = (rawEvent?.hole_pars && rawEvent.hole_pars.length === 18) ? rawEvent.hole_pars : DEFAULT_PARS;
   const { queue, clear, status, savedTick, pendingCount, online } = useHoleScoreSync(eventId);
 
-  // Derive scores from live event (so optimistic updates + polling reflect here);
-  // fall back to seed data when not authed / mock mode.
+  // Local overlay for mock/offline mode where the queue can't write to the API.
+  // Keyed by player id, then hole number.
+  const [localScores, setLocalScores] = useState<Scores>({});
+
   const scores: Scores = useMemo(() => {
     const map: Scores = {};
     if (rawEvent) {
@@ -30,15 +32,19 @@ export function FastScoring() {
           if (s > 0) map[pid][i + 1] = s;
         });
       }
-      return map;
+    } else {
+      for (const p of seedPlayers) {
+        map[p.id] = {};
+        for (let h = 1; h <= p.thru; h++)
+          map[p.id][h] = PARS[h - 1] + (h === p.lastHole?.hole ? p.lastHole.score - p.lastHole.par : 0);
+      }
     }
-    for (const p of seedPlayers) {
-      map[p.id] = {};
-      for (let h = 1; h <= p.thru; h++)
-        map[p.id][h] = PARS[h - 1] + (h === p.lastHole?.hole ? p.lastHole.score - p.lastHole.par : 0);
+    // Merge local overrides on top
+    for (const [pid, holes] of Object.entries(localScores)) {
+      map[pid] = { ...(map[pid] ?? {}), ...holes };
     }
     return map;
-  }, [rawEvent, seedPlayers, PARS]);
+  }, [rawEvent, seedPlayers, PARS, localScores]);
 
   const [playerIdx, setPlayerIdx] = useState(0);
   const [hole, setHole] = useState(event.hole);
