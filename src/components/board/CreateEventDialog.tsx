@@ -136,16 +136,20 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
       const list = players.data ?? [];
       const roster: EventPlayer[] = list
         .filter((p) => selectedPlayers.has(p.id))
-        .map((p) => ({
-          player_id: p.id,
-          name: `${p.first_name} ${p.last_name}`.trim(),
-          quota: p.game_points_needed ?? 0,
-          achieved: 0,
-          adjustment: 0,
-          holeScores: [],
-        }));
+        .map((p) => {
+          const sel = selectedPlayers.get(p.id)!;
+          return {
+            player_id: p.id,
+            name: `${p.first_name} ${p.last_name}`.trim(),
+            quota: Number.isFinite(sel.quota) ? sel.quota : 0,
+            achieved: 0,
+            winnings: 0,
+            adjustment: 0,
+            holeScores: [],
+          } as EventPlayer;
+        });
       return updateEvent(createdEvent.id, {
-        results_json: { players: roster },
+        results: { players: roster },
       });
     },
     onSuccess: () => {
