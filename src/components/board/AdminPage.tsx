@@ -2,15 +2,16 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft, Settings2, Play, Pause, RefreshCcw, DollarSign, Flag, Users,
-  Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio,
+  Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio, History,
 } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { useHoleLocks, lockHole, unlockHole, clearHoleAudit } from "@/lib/board/holeLocks";
 
-type Tab = "event" | "players" | "payouts" | "ticker";
+type Tab = "event" | "players" | "payouts" | "locks" | "ticker";
 
 export function AdminPage() {
   const { players: seedPlayers, teams: seedTeams, event: seedEvent, tickerItems: seedTicker } = useBoardData();
