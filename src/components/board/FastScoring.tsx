@@ -207,12 +207,13 @@ export function FastScoring() {
           const h = i + 1;
           const filled = scores[player.id]?.[h] != null;
           const active = h === hole;
+          const lk = lockedHoles.includes(h);
           return (
             <button
               key={h}
               onClick={() => setHole(h)}
               className={cn(
-                "flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-tabular text-[11px] font-bold",
+                "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md font-tabular text-[11px] font-bold",
                 active
                   ? "bg-primary text-primary-foreground shadow-[0_0_0_2px_color-mix(in_oklab,var(--primary)_50%,transparent)]"
                   : filled
@@ -221,6 +222,9 @@ export function FastScoring() {
               )}
             >
               {h}
+              {lk && (
+                <Lock className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 text-bubble" />
+              )}
             </button>
           );
         })}
