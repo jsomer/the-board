@@ -18,8 +18,10 @@ export function FastScoring() {
   const PARS = (rawEvent?.hole_pars && rawEvent.hole_pars.length === 18) ? rawEvent.hole_pars : DEFAULT_PARS;
   const { queue, clear, status, savedTick, pendingCount, online } = useHoleScoreSync(eventId);
 
-  // Derive scores from live event (so optimistic updates + polling reflect here);
-  // fall back to seed data when not authed / mock mode.
+  // Local overlay for mock/offline mode where the queue can't write to the API.
+  // Keyed by player id, then hole number.
+  const [localScores, setLocalScores] = useState<Scores>({});
+
   const scores: Scores = useMemo(() => {
     const map: Scores = {};
     if (rawEvent) {
@@ -30,15 +32,19 @@ export function FastScoring() {
           if (s > 0) map[pid][i + 1] = s;
         });
       }
-      return map;
+    } else {
+      for (const p of seedPlayers) {
+        map[p.id] = {};
+        for (let h = 1; h <= p.thru; h++)
+          map[p.id][h] = PARS[h - 1] + (h === p.lastHole?.hole ? p.lastHole.score - p.lastHole.par : 0);
+      }
     }
-    for (const p of seedPlayers) {
-      map[p.id] = {};
-      for (let h = 1; h <= p.thru; h++)
-        map[p.id][h] = PARS[h - 1] + (h === p.lastHole?.hole ? p.lastHole.score - p.lastHole.par : 0);
+    // Merge local overrides on top
+    for (const [pid, holes] of Object.entries(localScores)) {
+      map[pid] = { ...(map[pid] ?? {}), ...holes };
     }
     return map;
-  }, [rawEvent, seedPlayers, PARS]);
+  }, [rawEvent, seedPlayers, PARS, localScores]);
 
   const [playerIdx, setPlayerIdx] = useState(0);
   const [hole, setHole] = useState(event.hole);
@@ -78,12 +84,19 @@ export function FastScoring() {
     }
     const prev = scores[player.id]?.[hole];
     setLastEntry({ pid: player.id, hole, prev });
-    queue({
-      playerId: player.id,
-      holeNumber: hole,
-      grossScore: stroke,
-      prevScore: prev ?? 0,
-    });
+    // Local optimistic write — instant feedback, also covers mock/no-event mode
+    setLocalScores((m) => ({ ...m, [player.id]: { ...(m[player.id] ?? {}), [hole]: stroke } }));
+    if (eventId != null) {
+      queue({
+        playerId: player.id,
+        holeNumber: hole,
+        grossScore: stroke,
+        prevScore: prev ?? 0,
+      });
+    } else {
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 700);
+    }
     // Auto-advance
     window.setTimeout(() => {
       if (playerIdx < seedPlayers.length - 1) setPlayerIdx((i) => i + 1);
@@ -100,16 +113,24 @@ export function FastScoring() {
       toast.error(`Hole ${lastEntry.hole} is locked`);
       return;
     }
-    if (lastEntry.prev == null || lastEntry.prev < 1) {
-      // No prior score — clear locally instead of posting an invalid 0.
-      clear({ playerId: lastEntry.pid, holeNumber: lastEntry.hole });
-    } else {
-      queue({
-        playerId: lastEntry.pid,
-        holeNumber: lastEntry.hole,
-        grossScore: lastEntry.prev,
-        prevScore: scores[lastEntry.pid]?.[lastEntry.hole] ?? 0,
-      });
+    // Revert local overlay
+    setLocalScores((m) => {
+      const cur = { ...(m[lastEntry.pid] ?? {}) };
+      if (lastEntry.prev == null || lastEntry.prev < 1) delete cur[lastEntry.hole];
+      else cur[lastEntry.hole] = lastEntry.prev;
+      return { ...m, [lastEntry.pid]: cur };
+    });
+    if (eventId != null) {
+      if (lastEntry.prev == null || lastEntry.prev < 1) {
+        clear({ playerId: lastEntry.pid, holeNumber: lastEntry.hole });
+      } else {
+        queue({
+          playerId: lastEntry.pid,
+          holeNumber: lastEntry.hole,
+          grossScore: lastEntry.prev,
+          prevScore: scores[lastEntry.pid]?.[lastEntry.hole] ?? 0,
+        });
+      }
     }
     setLastEntry(null);
   };
