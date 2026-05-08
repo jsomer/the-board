@@ -192,6 +192,102 @@ export function PlayerDetailPage() {
         </div>
       </header>
 
+      {/* Projected payout */}
+      <section className="mx-4 mt-3">
+        <div className="mb-2 flex items-center gap-2">
+          <DollarSign className="h-4 w-4 text-money" />
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Projected payout</h2>
+          <span className="ml-auto rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Pos {position}/{fieldSize}
+          </span>
+        </div>
+        <div className={cn(
+          "flex items-center gap-3 rounded-2xl border p-3 shadow-card",
+          player.projected > 0
+            ? "border-money/30 bg-gradient-to-r from-money/10 via-money/5 to-transparent"
+            : "border-border bg-card",
+        )}>
+          <div className="flex-1">
+            <div className="flex items-baseline gap-2">
+              <span className={cn(
+                "font-tabular text-3xl font-extrabold leading-none",
+                player.projected > 0 ? "text-money" : "text-muted-foreground",
+              )}>
+                {player.projected > 0 ? `$${player.projected}` : "—"}
+              </span>
+              {projectedDelta !== 0 && player.projected > 0 && (
+                <span className={cn(
+                  "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 font-tabular text-[11px] font-bold",
+                  projectedDelta > 0 ? "bg-money/15 text-money" : "bg-down/15 text-down",
+                )}>
+                  {projectedDelta > 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                  ${Math.abs(projectedDelta)}
+                </span>
+              )}
+            </div>
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {player.movement > 0
+                ? `Moved up ${player.movement} since last hole`
+                : player.movement < 0
+                  ? `Dropped ${Math.abs(player.movement)} since last hole`
+                  : "Position holding steady"}
+            </div>
+          </div>
+          {player.bubble && (
+            <div className="rounded-xl border border-bubble/40 bg-bubble/10 px-2.5 py-1.5 text-right">
+              <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-bubble">
+                <Flame className="h-3 w-3" /> Bubble
+              </div>
+              {player.pressure && (
+                <div className="mt-0.5 max-w-[140px] text-[10px] font-semibold leading-tight text-bubble/90">
+                  {player.pressure}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Recent deltas */}
+      <section className="mx-4 mt-3">
+        <div className="mb-2 flex items-center gap-2">
+          <Activity className="h-4 w-4 text-primary" />
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Recent holes</h2>
+          <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Last {recent.length}
+          </span>
+        </div>
+        {recent.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            No holes played yet
+          </div>
+        ) : (
+          <ul className="grid grid-cols-3 gap-2">
+            {recent.map((h) => {
+              const off = h.toPar ?? 0;
+              const label = off <= -2 ? "Eagle" : off === -1 ? "Birdie" : off === 0 ? "Par" : off === 1 ? "Bogey" : "Double";
+              const tone = off < 0 ? "money" : off === 0 ? "muted" : "down";
+              const toneCls = tone === "money" ? "border-money/30 bg-money/10 text-money" : tone === "down" ? "border-down/25 bg-down/10 text-down" : "border-border bg-card text-foreground";
+              return (
+                <li key={h.hole} className={cn("rounded-xl border p-2", toneCls)}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">H{h.hole} · P{h.par}</span>
+                    {h.wonSkin && <Flame className="h-3 w-3 text-gold" />}
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-1">
+                    <span className="font-tabular text-xl font-extrabold leading-none">{h.score}</span>
+                    <span className="font-tabular text-[10px] font-bold opacity-70">{fmtToPar(off)}</span>
+                  </div>
+                  <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider opacity-70">
+                    {label} · {h.points}p
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
       {/* Jump to hole */}
       <section className="mx-4 mt-3">
         <div className="mb-2 flex items-center gap-2">
