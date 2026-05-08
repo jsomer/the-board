@@ -13,6 +13,19 @@ export function getSideBets(id: number | string) {
   return api<SideBet[]>(`/events/${id}/side-bets`);
 }
 
+export interface HoleScorePayload {
+  playerId: number;
+  holeNumber: number; // 1..18
+  grossScore: number; // positive int
+}
+
+export function postHoleScore(eventId: number | string, payload: HoleScorePayload) {
+  return api<unknown>(`/events/${eventId}/hole-score`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
 export function pickActiveEvent(events: EventRecord[]): EventRecord | null {
   if (!events.length) return null;
   // Prefer active, then draft, then highest id
