@@ -1,13 +1,16 @@
 import { Radio } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { StatusBar } from "./StatusBar";
 
 export function EventHeader() {
   const { event, players, isMock } = useBoardData();
   const onCourse = players.filter((p) => p.thru > 0 && p.thru < 18).length || players.length;
   return (
-    <header className="px-4 pb-3 pt-[max(env(safe-area-inset-top),12px)]">
-      <div className="flex items-start justify-between gap-3">
+    <header className="pb-3">
+      <StatusBar />
+      <div className="flex items-start justify-between gap-3 px-4 pt-1">
+
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
