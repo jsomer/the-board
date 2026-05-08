@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Check, Undo2, Flag, Cloud, CloudOff, Loader2, Zap, Lock, ListChecks, X } from "lucide-react";
 import { toast } from "sonner";
 import { useBoardData } from "@/lib/board/context";
@@ -9,6 +10,7 @@ import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { WhereDoIStand } from "./WhereDoIStand";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
+import { listGroups } from "@/lib/api/groups";
 
 const DEFAULT_PARS = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 3, 5, 4];
 
@@ -17,7 +19,26 @@ type Scores = Record<string, Record<number, number | undefined>>;
 export function FastScoring() {
   const { players: seedPlayers, event, rawEvent, eventId } = useBoardData();
   const PARS = (rawEvent?.hole_pars && rawEvent.hole_pars.length === 18) ? rawEvent.hole_pars : DEFAULT_PARS;
-  const { queue, clear, status, savedTick, pendingCount, online } = useHoleScoreSync(eventId);
+
+  const groupsQ = useQuery({
+    queryKey: ["groups", eventId],
+    queryFn: () => listGroups(eventId!),
+    enabled: eventId != null,
+    staleTime: 30_000,
+  });
+
+  const playerToGroup = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const g of groupsQ.data ?? []) {
+      for (const m of g.members) map.set(Number(m.player_id), g.id);
+    }
+    return map;
+  }, [groupsQ.data]);
+
+  const { queue, clear, status, savedTick, pendingCount, online } = useHoleScoreSync(
+    eventId,
+    (pid) => playerToGroup.get(pid) ?? null,
+  );
 
   // Local overlay for mock/offline mode where the queue can't write to the API.
   // Keyed by player id, then hole number.
