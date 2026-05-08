@@ -21,6 +21,17 @@ export function AdminPage() {
   const [tab, setTab] = useState<Tab>("event");
   const [live, setLive] = useState(true);
   const [locked, setLocked] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+
+  const meQ = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: getMe,
+    enabled: isAuthenticated(),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const isAdmin = Boolean(meQ.data?.isAdmin) || getStoredIsAdmin();
+
   const [name, setName] = useState(seedEvent.name);
   const [format, setFormat] = useState(seedEvent.format);
   const [hole, setHole] = useState(seedEvent.hole);
