@@ -10,6 +10,7 @@ import {
 
 import appCss from "../styles.css?url";
 import { BoardDataProvider } from "@/lib/board/context";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
