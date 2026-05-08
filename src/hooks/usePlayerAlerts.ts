@@ -47,11 +47,13 @@ export function usePlayerAlerts(meIdOverride?: string) {
       return;
     }
 
-    const me = meId ?? sorted[0]?.id;
-    if (!me) {
+    // No "me" identity yet (auth/me still loading, or admin without a player).
+    // Record baseline only — do not fire toasts for someone else's swings.
+    if (!meId) {
       prev.current = snap;
       return;
     }
+    const me = meId;
     const mePlayer = players.find((p) => p.id === me);
     const before = prev.current?.get(me);
     const after = snap.get(me);
