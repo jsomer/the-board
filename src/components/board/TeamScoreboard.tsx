@@ -1,8 +1,9 @@
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
-import { teams } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
 import { cn } from "@/lib/utils";
 
 export function TeamScoreboard() {
+  const { teams } = useBoardData();
   const [a, b] = teams;
   const lead = Math.abs(a.score - b.score);
   const leader = a.score < b.score ? a : b;

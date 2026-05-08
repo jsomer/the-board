@@ -1,8 +1,7 @@
 import { ArrowDown, ArrowUp, Flame, Minus, Trophy } from "lucide-react";
-import { players, type Player } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
+import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
-
-const sorted = [...players].sort((a, b) => a.toPar - b.toPar);
 
 function fmtPar(n: number) {
   if (n === 0) return "E";
@@ -10,6 +9,8 @@ function fmtPar(n: number) {
 }
 
 export function Leaderboard() {
+  const { players } = useBoardData();
+  const sorted = [...players].sort((a, b) => a.toPar - b.toPar);
   return (
     <section className="px-4">
       <div className="mb-2 flex items-center justify-between">

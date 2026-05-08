@@ -1,6 +1,7 @@
-import { tickerItems } from "@/data/board";
+import { useBoardData } from "@/lib/board/context";
 
 export function Ticker() {
+  const { tickerItems } = useBoardData();
   const items = [...tickerItems, ...tickerItems];
   return (
     <div className="ticker-mask relative overflow-hidden border-y border-border bg-surface/60">
