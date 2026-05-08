@@ -16,7 +16,7 @@ type Scores = Record<string, Record<number, number | undefined>>;
 export function FastScoring() {
   const { players: seedPlayers, event, rawEvent, eventId } = useBoardData();
   const PARS = (rawEvent?.hole_pars && rawEvent.hole_pars.length === 18) ? rawEvent.hole_pars : DEFAULT_PARS;
-  const { queue, status, savedTick } = useHoleScoreSync(eventId);
+  const { queue, status, savedTick, pendingCount, online } = useHoleScoreSync(eventId);
 
   // Derive scores from live event (so optimistic updates + polling reflect here);
   // fall back to seed data when not authed / mock mode.
