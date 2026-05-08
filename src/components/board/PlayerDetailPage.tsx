@@ -438,6 +438,7 @@ export function PlayerDetailPage() {
         playerRow={openHole ? holes[openHole - 1] : null}
         playerName={player.name}
         fieldHoles={fieldHoles}
+        skinResults={skinResults}
       />
     </main>
   );
@@ -446,18 +447,19 @@ export function PlayerDetailPage() {
 type FieldHoles = { player: Player; rows: HoleRow[] }[];
 
 function HoleDetailSheet({
-  holeNumber, onClose, playerRow, playerName, fieldHoles,
+  holeNumber, onClose, playerRow, playerName, fieldHoles, skinResults,
 }: {
   holeNumber: number | null;
   onClose: () => void;
   playerRow: HoleRow | null;
   playerName: string;
   fieldHoles: FieldHoles;
+  skinResults: HoleSkin[];
 }) {
   const open = holeNumber !== null && playerRow !== null;
   const par = playerRow?.par ?? 0;
   const distance = holeNumber ? DISTANCES[holeNumber - 1] : 0;
-  const skin = holeNumber ? SKIN_RESULTS.find((s) => s.hole === holeNumber) : undefined;
+  const skin = holeNumber ? skinResults.find((s) => s.hole === holeNumber) : undefined;
   const skinWinner = skin?.winner ? fieldHoles.find((f) => f.player.id === skin.winner)?.player : null;
 
   // Field distribution across all players for this hole
