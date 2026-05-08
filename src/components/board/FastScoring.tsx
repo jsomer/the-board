@@ -72,6 +72,10 @@ export function FastScoring() {
 
   const enter = (stroke: number) => {
     if (!player) return;
+    if (isLocked) {
+      toast.error(`Hole ${hole} is locked`, { description: "Ask an admin to unlock it before editing." });
+      return;
+    }
     const prev = scores[player.id]?.[hole];
     setLastEntry({ pid: player.id, hole, prev });
     queue({
@@ -92,6 +96,10 @@ export function FastScoring() {
 
   const undo = () => {
     if (!lastEntry) return;
+    if (lockedHoles.includes(lastEntry.hole)) {
+      toast.error(`Hole ${lastEntry.hole} is locked`);
+      return;
+    }
     queue({
       playerId: lastEntry.pid,
       holeNumber: lastEntry.hole,
