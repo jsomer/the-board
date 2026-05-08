@@ -1,16 +1,43 @@
 import { Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useBoardData } from "@/lib/board/context";
 
-const skins = [
-  { hole: 13, status: "won", who: "Reyes", amount: 20 },
-  { hole: 14, status: "carry", amount: 40 },
-  { hole: 15, status: "pending", amount: 60 },
-  { hole: 16, status: "open", amount: 20 },
-  { hole: 17, status: "open", amount: 20 },
-  { hole: 18, status: "open", amount: 20 },
-] as const;
+const FALLBACK = [
+  { hole: 13, status: "won" as const, who: "Reyes", amount: 20 },
+  { hole: 14, status: "carry" as const, amount: 40 },
+  { hole: 15, status: "pending" as const, amount: 60 },
+  { hole: 16, status: "open" as const, amount: 20 },
+  { hole: 17, status: "open" as const, amount: 20 },
+  { hole: 18, status: "open" as const, amount: 20 },
+];
+
+type Strip = { hole: number; status: "won" | "carry" | "pending" | "open"; amount: number; who?: string };
 
 export function SkinsStrip() {
+  const { skins, rawEvent, players, event } = useBoardData();
+
+  const strip: Strip[] = (() => {
+    if (!skins || !rawEvent) return FALLBACK;
+    const playerName = (id: string | number) => players.find((p) => p.id === String(id))?.name.split(" ").slice(-1)[0] ?? String(id);
+    const perHoleBase = skins.participants.length > 0 ? skins.pot / 18 : 5;
+    const liveHole = event.hole;
+
+    // pick 6 holes around the live hole
+    const start = Math.max(1, Math.min(13, liveHole - 2));
+    const holes = Array.from({ length: 6 }, (_, i) => start + i);
+    return holes.map((h) => {
+      const rec = skins.holes.find((x) => x.hole === h);
+      const carry = rec?.carryIn ?? 0;
+      const amount = Math.round((carry + 1) * perHoleBase);
+      if (rec?.winner != null) return { hole: h, status: "won", amount, who: playerName(rec.winner) };
+      if (h === liveHole) return { hole: h, status: "pending", amount };
+      if (carry > 0) return { hole: h, status: "carry", amount };
+      return { hole: h, status: "open", amount };
+    });
+  })();
+
+  const liveSkinHole = strip.find((s) => s.status === "pending");
+
   return (
     <section className="px-4">
       <div className="rounded-2xl border border-border bg-surface p-3 shadow-card">
@@ -20,11 +47,12 @@ export function SkinsStrip() {
             Skins
           </div>
           <span className="text-[11px] font-semibold text-muted-foreground">
-            Pot <span className="text-gold">$80</span> on hole 15
+            Pot <span className="text-gold">${event.skinsPot || liveSkinHole?.amount || 0}</span>
+            {liveSkinHole ? ` on hole ${liveSkinHole.hole}` : ""}
           </span>
         </div>
         <div className="grid grid-cols-6 gap-1.5">
-          {skins.map((s) => (
+          {strip.map((s) => (
             <div
               key={s.hole}
               className={cn(
