@@ -288,6 +288,13 @@ export function FastScoring() {
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               {player.team} · Thru {player.thru} · {fmtToPar(player.toPar)}
             </div>
+            <button
+              type="button"
+              onClick={() => setRoundOpen(true)}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-surface"
+            >
+              <ListChecks className="h-3 w-3" /> View round
+            </button>
           </div>
           <button
             aria-label="Next player"
