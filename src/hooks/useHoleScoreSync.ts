@@ -28,10 +28,27 @@ interface QueueArgs {
 
 const DEBOUNCE_MS = 500;
 const MAX_BACKOFF_MS = 30_000;
+const MAX_ATTEMPTS = 8;
 const STORAGE_PREFIX = "gt_pendingScores_v1:";
 
 function storageKey(eventId: number) {
   return `${STORAGE_PREFIX}${eventId}`;
+}
+
+/** Remove queue entries for events other than the current one. */
+function pruneStaleQueues(currentEventId: number) {
+  if (typeof window === "undefined") return;
+  try {
+    const keep = storageKey(currentEventId);
+    const toRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith(STORAGE_PREFIX) && k !== keep) toRemove.push(k);
+    }
+    toRemove.forEach((k) => window.localStorage.removeItem(k));
+  } catch {
+    /* ignore */
+  }
 }
 
 function loadQueue(eventId: number): Map<string, PendingEntry> {
@@ -76,6 +93,7 @@ export function useHoleScoreSync(eventId: number | null) {
       setPendingCount(0);
       return;
     }
+    pruneStaleQueues(eventId);
     queueRef.current = loadQueue(eventId);
     setPendingCount(queueRef.current.size);
     if (queueRef.current.size > 0) {
