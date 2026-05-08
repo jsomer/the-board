@@ -1,11 +1,13 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity } from "lucide-react";
+import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity, Ruler, X } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
 
 // Same constants used on the leaderboard so the views stay consistent
 const QUOTAS: Record<string, number> = {
