@@ -433,7 +433,7 @@ export function PlayerDetailPage() {
   );
 }
 
-function NineRow({ label, holes }: { label: string; holes: HoleRow[] }) {
+function NineRow({ label, holes, onOpen }: { label: string; holes: HoleRow[]; onOpen: (h: number) => void }) {
   const totalScore = holes.reduce((s, h) => s + (h.score ?? 0), 0);
   const totalPar = holes.filter((h) => h.score !== null).reduce((s, h) => s + h.par, 0);
   const totalPts = holes.reduce((s, h) => s + h.points, 0);
@@ -447,24 +447,33 @@ function NineRow({ label, holes }: { label: string; holes: HoleRow[] }) {
       </div>
       <div className="grid grid-cols-9 gap-1">
         {holes.map((h) => (
-          <HoleCell key={h.hole} h={h} />
+          <HoleCell key={h.hole} h={h} onOpen={onOpen} />
         ))}
       </div>
     </div>
   );
 }
 
-function HoleCell({ h }: { h: HoleRow }) {
+function HoleCell({ h, onOpen }: { h: HoleRow; onOpen: (h: number) => void }) {
   const played = h.score !== null;
   const tone = !played
-    ? "border-border bg-surface-2/40 text-muted-foreground/50"
+    ? "border-border bg-surface-2/40 text-muted-foreground/50 hover:bg-surface-2/70"
     : (h.toPar ?? 0) <= -1
-      ? "border-money/30 bg-money/10 text-money"
+      ? "border-money/30 bg-money/10 text-money hover:bg-money/20"
       : (h.toPar ?? 0) === 0
-        ? "border-border bg-card text-foreground"
-        : "border-down/25 bg-down/5 text-down";
+        ? "border-border bg-card text-foreground hover:bg-surface-2/60"
+        : "border-down/25 bg-down/5 text-down hover:bg-down/15";
   return (
-    <div id={`hole-${h.hole}`} className={cn("relative flex flex-col items-center rounded-lg border px-1 py-1.5 scroll-mt-24", tone)}>
+    <button
+      type="button"
+      onClick={() => onOpen(h.hole)}
+      id={`hole-${h.hole}`}
+      aria-label={`Hole ${h.hole} details`}
+      className={cn(
+        "relative flex flex-col items-center rounded-lg border px-1 py-1.5 scroll-mt-24 transition-colors active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        tone,
+      )}
+    >
       <span className="text-[8px] font-bold uppercase tracking-wider opacity-70">H{h.hole}</span>
       <span className="font-tabular text-sm font-extrabold leading-none">
         {played ? h.score : "—"}
@@ -475,7 +484,7 @@ function HoleCell({ h }: { h: HoleRow }) {
       {h.wonSkin && (
         <Flame className="absolute -right-0.5 -top-0.5 h-3 w-3 text-gold drop-shadow" />
       )}
-    </div>
+    </button>
   );
 }
 
