@@ -54,27 +54,58 @@ export function GroupsManager({ eventId, rawEvent }: Props) {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["groups", eventId] });
 
+  const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newHole, setNewHole] = useState<string>("");
+  const [newMembers, setNewMembers] = useState<Set<number>>(new Set());
   const [createError, setCreateError] = useState<string | null>(null);
 
+  const resetCreate = () => {
+    setCreating(false);
+    setNewName("");
+    setNewHole("");
+    setNewMembers(new Set());
+    setCreateError(null);
+  };
+
+  const toggleMember = (id: number) => {
+    setNewMembers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < 4) next.add(id);
+      else toast.warning("Groups can hold up to 4 players");
+      return next;
+    });
+  };
+
   const createMut = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const startHole = newHole.trim() === "" ? null : Number(newHole);
       if (startHole != null && (!Number.isInteger(startHole) || startHole < 1 || startHole > 18)) {
         throw new Error("Start hole must be 1–18");
       }
-      return createGroup(eventId, { name: newName.trim(), startHole });
+      const created = await createGroup(eventId, { name: newName.trim(), startHole });
+      for (const pid of newMembers) {
+        await addGroupMember(eventId, created.id, pid);
+      }
+      return created;
     },
     onSuccess: () => {
-      setNewName("");
-      setNewHole("");
-      setCreateError(null);
+      resetCreate();
       invalidate();
       toast.success("Group created");
     },
     onError: (e) => setCreateError(readErr(e, "Failed to create group")),
   });
+
+  const suggestName = () => {
+    const used = new Set(groups.map((g) => g.name.trim().toLowerCase()));
+    for (let i = 0; i < 26; i++) {
+      const candidate = `Group ${String.fromCharCode(65 + i)}`;
+      if (!used.has(candidate.toLowerCase())) return candidate;
+    }
+    return `Group ${groups.length + 1}`;
+  };
 
   if (groupsQ.isLoading) {
     return (
@@ -94,39 +125,127 @@ export function GroupsManager({ eventId, rawEvent }: Props) {
   return (
     <div className="space-y-3">
       {/* Create */}
-      <div className="rounded-2xl border border-border bg-card p-3.5 shadow-card">
-        <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-          New group
-        </h2>
-        <div className="flex gap-2">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Group A"
-            className="flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold outline-none focus:border-primary"
-          />
-          <input
-            value={newHole}
-            onChange={(e) => setNewHole(e.target.value)}
-            placeholder="Hole"
-            type="number"
-            min={1}
-            max={18}
-            className="w-20 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold outline-none focus:border-primary"
-          />
-          <button
-            onClick={() => createMut.mutate()}
-            disabled={!newName.trim() || createMut.isPending}
-            className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
-          >
-            {createMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            Add
-          </button>
+      {!creating ? (
+        <button
+          onClick={() => {
+            setCreating(true);
+            setNewName((n) => n || suggestName());
+          }}
+          disabled={ungrouped.length === 0}
+          className={cn(
+            "flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed px-3 py-3 text-sm font-bold uppercase tracking-wider transition-colors",
+            ungrouped.length === 0
+              ? "border-border text-muted-foreground/60"
+              : "border-primary/50 bg-primary/5 text-primary hover:bg-primary/10",
+          )}
+        >
+          <Plus className="h-4 w-4" />
+          {ungrouped.length === 0 ? "All players are grouped" : "Create Group"}
+        </button>
+      ) : (
+        <div className="rounded-2xl border border-border bg-card p-3.5 shadow-card">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              New group
+            </h2>
+            <button
+              onClick={resetCreate}
+              className="rounded-lg p-1 text-muted-foreground hover:text-foreground"
+              aria-label="Cancel"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Group A"
+              className="flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold outline-none focus:border-primary"
+            />
+            <input
+              value={newHole}
+              onChange={(e) => setNewHole(e.target.value)}
+              placeholder="Hole"
+              type="number"
+              min={1}
+              max={18}
+              className="w-20 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-semibold outline-none focus:border-primary"
+            />
+          </div>
+
+          <div className="mt-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Add players · {newMembers.size}/4
+              </span>
+              <span className="text-[10px] font-semibold text-muted-foreground">
+                {ungrouped.length} unassigned
+              </span>
+            </div>
+            {ungrouped.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                No unassigned event players available.
+              </p>
+            ) : (
+              <ul className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border bg-surface p-2">
+                {ungrouped.map((p) => {
+                  const id = Number(p.player_id);
+                  const checked = newMembers.has(id);
+                  const atLimit = !checked && newMembers.size >= 4;
+                  return (
+                    <li key={p.player_id}>
+                      <button
+                        type="button"
+                        onClick={() => toggleMember(id)}
+                        disabled={atLimit}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm font-semibold transition-colors",
+                          checked
+                            ? "bg-primary/15 text-foreground"
+                            : "hover:bg-surface-2 disabled:opacity-40",
+                        )}
+                      >
+                        <span>{p.name}</span>
+                        <span
+                          className={cn(
+                            "flex h-5 w-5 items-center justify-center rounded border",
+                            checked
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-surface",
+                          )}
+                        >
+                          {checked && <Check className="h-3 w-3" />}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={resetCreate}
+              className="flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => createMut.mutate()}
+              disabled={!newName.trim() || newMembers.size === 0 || createMut.isPending}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+            >
+              {createMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              Create group
+            </button>
+          </div>
+          {createError && (
+            <p className="mt-2 text-xs font-semibold text-destructive">{createError}</p>
+          )}
         </div>
-        {createError && (
-          <p className="mt-2 text-xs font-semibold text-destructive">{createError}</p>
-        )}
-      </div>
+      )}
 
       {/* Group list */}
       {groups.length === 0 && (
