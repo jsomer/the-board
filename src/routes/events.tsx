@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, LogOut, Calendar, Users, DollarSign, Loader2, Trophy } from "lucide-react";
+import { Plus, LogOut, Calendar, Users, DollarSign, Loader2, Trophy, Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { listEvents } from "@/lib/api/events";
 import { requireAuth } from "@/lib/board/entryGuard";
 import { isAuthenticated, getStoredIsAdmin, logout as apiLogout } from "@/lib/api/auth";
@@ -34,6 +35,9 @@ function EventsPickerPage() {
   const isAdmin = getStoredIsAdmin();
   const { meId } = useMe();
   const [showCreate, setShowCreate] = useState(false);
+  const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [showAllFinished, setShowAllFinished] = useState(false);
 
   const { data: events = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["events"],
@@ -48,7 +52,25 @@ function EventsPickerPage() {
     : events.filter((e) => meId != null && e.players.some((p) => String(p.player_id) === String(meId)));
 
   const open = visible.filter((e) => statusGroup(e) === "draft").sort((a, b) => b.id - a.id);
-  const finished = visible.filter((e) => statusGroup(e) === "final").sort((a, b) => b.id - a.id);
+
+  const finishedAll = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return visible
+      .filter((e) => statusGroup(e) === "final")
+      .filter((e) => {
+        if (!q) return true;
+        return (
+          (e.event_code ?? "").toLowerCase().includes(q) ||
+          (e.name ?? "").toLowerCase().includes(q) ||
+          (e.course_name ?? "").toLowerCase().includes(q)
+        );
+      })
+      .filter((e) => (dateFilter ? e.event_date === dateFilter : true))
+      .sort((a, b) => b.id - a.id);
+  }, [visible, search, dateFilter]);
+
+  const filtersActive = search.trim().length > 0 || dateFilter.length > 0;
+  const finished = showAllFinished || filtersActive ? finishedAll : finishedAll.slice(0, 5);
 
   const enter = (id: number) => {
     if (typeof window !== "undefined") {
@@ -125,9 +147,49 @@ function EventsPickerPage() {
         </Section>
       )}
 
-      {finished.length > 0 && (
-        <Section title="Finished" count={finished.length}>
-          {finished.map((e) => <EventCard key={e.id} event={e} onPick={enter} />)}
+      {(finishedAll.length > 0 || filtersActive) && (
+        <Section title="Last Rounds" count={finishedAll.length}>
+          <div className="mb-2 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search code or course"
+                className="h-9 pl-8 text-sm"
+              />
+            </div>
+            <Input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="h-9 w-[8.5rem] text-sm"
+            />
+            {filtersActive && (
+              <button
+                onClick={() => { setSearch(""); setDateFilter(""); }}
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground"
+                aria-label="Clear filters"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {finished.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-surface p-4 text-center text-sm text-muted-foreground">
+              No rounds match those filters.
+            </div>
+          ) : (
+            finished.map((e) => <EventCard key={e.id} event={e} onPick={enter} />)
+          )}
+          {!filtersActive && !showAllFinished && finishedAll.length > 5 && (
+            <button
+              onClick={() => setShowAllFinished(true)}
+              className="mt-2 w-full rounded-md border border-border bg-surface px-3 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+            >
+              Show all {finishedAll.length}
+            </button>
+          )}
         </Section>
       )}
 
