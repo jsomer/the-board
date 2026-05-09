@@ -85,10 +85,31 @@ function buildHoles(
 }
 
 export function PlayerDetailPage() {
-  const { players: seedPlayers, event: boardEvent, rawEvent, skins } = useBoardData();
+  const { players: seedPlayers, event: boardEvent, rawEvent, skins, eventId, isMock } = useBoardData();
   const event = boardEvent;
   const { playerId } = useParams({ from: "/player/$playerId" });
   const player = seedPlayers.find((p) => p.id === playerId);
+  const { meId, isAdmin } = useMe();
+  const { locked } = useHoleLocks();
+
+  const groupsQ = useQuery({
+    queryKey: ["groups", eventId],
+    queryFn: () => listGroups(eventId!),
+    enabled: eventId != null && !isMock,
+    staleTime: 30_000,
+  });
+  const playerToGroup = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const g of groupsQ.data ?? []) {
+      for (const m of g.members) map.set(Number(m.player_id), g.id);
+    }
+    return map;
+  }, [groupsQ.data]);
+
+  const { queue, clear, status, savedTick } = useHoleScoreSync(
+    eventId,
+    (pid) => playerToGroup.get(pid) ?? null,
+  );
 
   const pars = rawEvent?.hole_pars && rawEvent.hole_pars.length === 18 ? rawEvent.hole_pars : DEFAULT_PARS;
   const skinResults = useMemo(() => skinRowsFromState(skins), [skins]);
