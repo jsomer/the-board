@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity, Ruler, X } from "lucide-react";
+import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity, Ruler, X, Lock, Pencil, Check, Loader2, CloudOff } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { quotasFromEvent, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
@@ -9,6 +10,10 @@ import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { useMe } from "@/hooks/useMe";
+import { useHoleScoreSync, type SyncStatus } from "@/hooks/useHoleScoreSync";
+import { useHoleLocks } from "@/lib/board/holeLocks";
+import { listGroups } from "@/lib/api/groups";
 
 // Default quota when nothing is on the event yet
 const DEFAULT_QUOTA = 30;
@@ -80,10 +85,31 @@ function buildHoles(
 }
 
 export function PlayerDetailPage() {
-  const { players: seedPlayers, event: boardEvent, rawEvent, skins } = useBoardData();
+  const { players: seedPlayers, event: boardEvent, rawEvent, skins, eventId, isMock } = useBoardData();
   const event = boardEvent;
   const { playerId } = useParams({ from: "/player/$playerId" });
   const player = seedPlayers.find((p) => p.id === playerId);
+  const { meId, isAdmin } = useMe();
+  const { locked } = useHoleLocks();
+
+  const groupsQ = useQuery({
+    queryKey: ["groups", eventId],
+    queryFn: () => listGroups(eventId!),
+    enabled: eventId != null && !isMock,
+    staleTime: 30_000,
+  });
+  const playerToGroup = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const g of groupsQ.data ?? []) {
+      for (const m of g.members) map.set(Number(m.player_id), g.id);
+    }
+    return map;
+  }, [groupsQ.data]);
+
+  const { queue, clear, status, savedTick } = useHoleScoreSync(
+    eventId,
+    (pid) => playerToGroup.get(pid) ?? null,
+  );
 
   const pars = rawEvent?.hole_pars && rawEvent.hole_pars.length === 18 ? rawEvent.hole_pars : DEFAULT_PARS;
   const skinResults = useMemo(() => skinRowsFromState(skins), [skins]);
@@ -135,6 +161,21 @@ export function PlayerDetailPage() {
   );
 
   const [openHole, setOpenHole] = useState<number | null>(null);
+
+  // Editing capability: real event, signed in, and either own player or admin.
+  const canEditPlayer = !isMock && !!rawEvent && !!realPlayer && (isAdmin || (meId != null && meId === player.id));
+  const setHoleScore = (hole: number, gross: number) => {
+    if (!canEditPlayer || !realPlayer) return;
+    if (locked.includes(hole)) return;
+    const prev = realPlayer.holeScores[hole - 1] ?? 0;
+    if (gross === prev) return;
+    queue({ playerId: realPlayer.player_id, holeNumber: hole, grossScore: gross, prevScore: prev });
+  };
+  const clearHoleScore = (hole: number) => {
+    if (!canEditPlayer || !realPlayer) return;
+    if (locked.includes(hole)) return;
+    clear({ playerId: realPlayer.player_id, holeNumber: hole });
+  };
 
   const jumpToHole = (hole: number) => {
     const el = document.getElementById(`hole-${hole}`);
@@ -310,7 +351,13 @@ export function PlayerDetailPage() {
               const tone = off < 0 ? "money" : off === 0 ? "muted" : "down";
               const toneCls = tone === "money" ? "border-money/30 bg-money/10 text-money" : tone === "down" ? "border-down/25 bg-down/10 text-down" : "border-border bg-card text-foreground";
               return (
-                <li key={h.hole} className={cn("rounded-xl border p-2", toneCls)}>
+                <li key={h.hole}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenHole(h.hole)}
+                    aria-label={`Edit hole ${h.hole}`}
+                    className={cn("w-full rounded-xl border p-2 text-left transition-all active:scale-[0.97]", toneCls)}
+                  >
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">H{h.hole} · P{h.par}</span>
                     {h.wonSkin && <Flame className="h-3 w-3 text-gold" />}
@@ -322,6 +369,7 @@ export function PlayerDetailPage() {
                   <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider opacity-70">
                     {label} · {h.points}p
                   </div>
+                  </button>
                 </li>
               );
             })}
@@ -346,8 +394,8 @@ export function PlayerDetailPage() {
               <button
                 key={h.hole}
                 type="button"
-                onClick={() => jumpToHole(h.hole)}
-                aria-label={`Jump to hole ${h.hole}`}
+                onClick={() => { setOpenHole(h.hole); jumpToHole(h.hole); }}
+                aria-label={`Open hole ${h.hole}`}
                 className={cn(
                   "relative flex h-9 items-center justify-center rounded-lg font-tabular text-[12px] font-extrabold transition-all active:scale-95",
                   isCurrent
@@ -439,6 +487,12 @@ export function PlayerDetailPage() {
         playerName={player.name}
         fieldHoles={fieldHoles}
         skinResults={skinResults}
+        canEdit={canEditPlayer}
+        isLocked={openHole != null && locked.includes(openHole)}
+        syncStatus={status}
+        savedTick={savedTick}
+        onSetScore={setHoleScore}
+        onClearScore={clearHoleScore}
       />
     </main>
   );
@@ -448,6 +502,7 @@ type FieldHoles = { player: Player; rows: HoleRow[] }[];
 
 function HoleDetailSheet({
   holeNumber, onClose, playerRow, playerName, fieldHoles, skinResults,
+  canEdit, isLocked, syncStatus, savedTick, onSetScore, onClearScore,
 }: {
   holeNumber: number | null;
   onClose: () => void;
@@ -455,6 +510,12 @@ function HoleDetailSheet({
   playerName: string;
   fieldHoles: FieldHoles;
   skinResults: HoleSkin[];
+  canEdit: boolean;
+  isLocked: boolean;
+  syncStatus: SyncStatus;
+  savedTick: number;
+  onSetScore: (hole: number, gross: number) => void;
+  onClearScore: (hole: number) => void;
 }) {
   const open = holeNumber !== null && playerRow !== null;
   const par = playerRow?.par ?? 0;
@@ -546,7 +607,21 @@ function HoleDetailSheet({
           </div>
         )}
 
-        {/* Skin */}
+        {/* Score editor */}
+        {canEdit && holeNumber != null && (
+          <ScoreEditor
+            hole={holeNumber}
+            par={par}
+            current={playerRow?.score ?? null}
+            isLocked={isLocked}
+            syncStatus={syncStatus}
+            savedTick={savedTick}
+            onSet={(g) => onSetScore(holeNumber, g)}
+            onClear={() => onClearScore(holeNumber)}
+          />
+        )}
+
+
         <div className="mt-3 flex items-center gap-3 rounded-2xl border border-gold/25 bg-gradient-to-r from-gold/10 via-gold/5 to-transparent p-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/20 text-gold">
             <Flame className="h-5 w-5" />
@@ -750,4 +825,132 @@ function Stat({
 function fmtToPar(n: number) {
   if (n === 0) return "E";
   return n > 0 ? `+${n}` : `${n}`;
+}
+
+function ScoreEditor({
+  hole, par, current, isLocked, syncStatus, savedTick, onSet, onClear,
+}: {
+  hole: number;
+  par: number;
+  current: number | null;
+  isLocked: boolean;
+  syncStatus: SyncStatus;
+  savedTick: number;
+  onSet: (gross: number) => void;
+  onClear: () => void;
+}) {
+  const [draft, setDraft] = useState<number>(current ?? par);
+  const [flash, setFlash] = useState(false);
+
+  // Reset draft when opening a different hole / score updates from server.
+  useEffect(() => { setDraft(current ?? par); }, [hole, current, par]);
+
+  // Saved-flash on successful sync.
+  useEffect(() => {
+    if (savedTick === 0) return;
+    setFlash(true);
+    const t = window.setTimeout(() => setFlash(false), 900);
+    return () => window.clearTimeout(t);
+  }, [savedTick]);
+
+  const commit = (next: number) => {
+    const clamped = Math.max(1, Math.min(12, next));
+    setDraft(clamped);
+    onSet(clamped);
+  };
+
+  const presets = [par - 2, par - 1, par, par + 1, par + 2].filter((v) => v >= 1 && v <= 12);
+
+  if (isLocked) {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border bg-card p-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <Lock className="h-3.5 w-3.5" />
+        Hole locked — score cannot be edited
+      </div>
+    );
+  }
+
+  const toPar = draft - par;
+  const toneCls =
+    toPar < 0 ? "border-money/30 bg-money/5"
+    : toPar === 0 ? "border-border bg-card"
+    : "border-down/25 bg-down/5";
+
+  return (
+    <div className={cn("mt-3 rounded-2xl border p-3", toneCls)}>
+      <div className="mb-2 flex items-center gap-2">
+        <Pencil className="h-3.5 w-3.5 text-primary" />
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+          Edit score
+        </h3>
+        <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+          {syncStatus === "saving" && (
+            <span className="flex items-center gap-1 text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Saving</span>
+          )}
+          {syncStatus === "offline" && (
+            <span className="flex items-center gap-1 text-down"><CloudOff className="h-3 w-3" /> Offline</span>
+          )}
+          {syncStatus === "error" && (
+            <span className="text-down">Retrying…</span>
+          )}
+          {(syncStatus === "saved" || flash) && syncStatus !== "saving" && syncStatus !== "offline" && syncStatus !== "error" && (
+            <span className="flex items-center gap-1 text-money"><Check className="h-3 w-3" /> Saved</span>
+          )}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => commit(draft - 1)}
+          aria-label="Decrease strokes"
+          className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-surface-2 text-xl font-extrabold active:scale-95"
+        >
+          −
+        </button>
+        <div className="flex flex-1 flex-col items-center">
+          <span className="font-tabular text-4xl font-extrabold leading-none">{draft}</span>
+          <span className="mt-1 font-tabular text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            {fmtToPar(toPar)} · Par {par}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => commit(draft + 1)}
+          aria-label="Increase strokes"
+          className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-surface-2 text-xl font-extrabold active:scale-95"
+        >
+          +
+        </button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-5 gap-1">
+        {presets.map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => commit(v)}
+            className={cn(
+              "rounded-lg border px-1.5 py-1.5 font-tabular text-sm font-extrabold transition active:scale-95",
+              draft === v
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-foreground hover:bg-surface-2",
+            )}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+
+      {current != null && current > 0 && (
+        <button
+          type="button"
+          onClick={onClear}
+          className="mt-2 w-full rounded-lg border border-dashed border-border px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-surface-2"
+        >
+          Clear hole
+        </button>
+      )}
+    </div>
+  );
 }
