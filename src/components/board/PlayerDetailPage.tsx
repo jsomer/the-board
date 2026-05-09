@@ -394,8 +394,8 @@ export function PlayerDetailPage() {
               <button
                 key={h.hole}
                 type="button"
-                onClick={() => jumpToHole(h.hole)}
-                aria-label={`Jump to hole ${h.hole}`}
+                onClick={() => { setOpenHole(h.hole); jumpToHole(h.hole); }}
+                aria-label={`Open hole ${h.hole}`}
                 className={cn(
                   "relative flex h-9 items-center justify-center rounded-lg font-tabular text-[12px] font-extrabold transition-all active:scale-95",
                   isCurrent
