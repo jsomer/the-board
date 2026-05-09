@@ -369,6 +369,7 @@ export function PlayerDetailPage() {
                   <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider opacity-70">
                     {label} · {h.points}p
                   </div>
+                  </button>
                 </li>
               );
             })}
