@@ -131,16 +131,20 @@ export function GroupsManager({ eventId, rawEvent }: Props) {
             setCreating(true);
             setNewName((n) => n || suggestName());
           }}
-          disabled={ungrouped.length === 0}
+          disabled={eventPlayers.length === 0}
           className={cn(
             "flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed px-3 py-3 text-sm font-bold uppercase tracking-wider transition-colors",
-            ungrouped.length === 0
+            eventPlayers.length === 0
               ? "border-border text-muted-foreground/60"
               : "border-primary/50 bg-primary/5 text-primary hover:bg-primary/10",
           )}
         >
           <Plus className="h-4 w-4" />
-          {ungrouped.length === 0 ? "All players are grouped" : "Create Group"}
+          {eventPlayers.length === 0
+            ? "Add players to the event first"
+            : ungrouped.length === 0
+              ? "Create Group (all players grouped)"
+              : `Create Group · ${ungrouped.length} unassigned`}
         </button>
       ) : (
         <div className="rounded-2xl border border-border bg-card p-3.5 shadow-card">
