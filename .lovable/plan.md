@@ -2,6 +2,23 @@
 
 Replace `src/data/board.ts` mocks with live data from the GameTracker API (`https://gametracker-api-npr9.onrender.com`), polling every 8s. All components keep their existing visual design and design tokens — only the data source and a few derived fields change.
 
+## App entry flow (event selection)
+
+On every cold load of `/` (and any protected route), the app routes the user as follows:
+
+1. **Not authenticated** → redirect to `/login`.
+2. **Authenticated, no `activeEventId`** (no `?eventId=` and no value in `localStorage.activeEventId`) → redirect to `/events` (event picker).
+3. **Authenticated with an `activeEventId`** → load that event normally. The picker stays accessible via a "Switch event" link in the header.
+
+`/events` page:
+- Lists all events from `GET /events`, grouped by status (Active / Draft first, then Final), newest first.
+- Each row shows: name, date, course, scoring type, player count, status badge.
+- Tapping a row sets `localStorage.activeEventId`, then navigates to `/?eventId=<id>` so the board context locks onto it.
+- **Admins only** see a primary "Create event" button at the top that opens the existing `CreateEventDialog`. On success the new event becomes the active event and the user is sent to `/`.
+- "Sign out" link on the page so non-admins who can't pick anything aren't trapped.
+
+Mock-data fallback in `BoardDataProvider` is removed for authenticated sessions — if `eventId` is null after auth, the provider returns `loading` and the router has already redirected to `/events`, so board components never render against mock data again.
+
 ## What stays the same
 
 - shadcn/ui components, three-theme system, all animation classes, design tokens
