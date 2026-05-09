@@ -247,149 +247,162 @@ export function FastScoring() {
         })}
       </div>
 
-      {/* Player card (swipe area) */}
-      <section
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-        className="mx-4 mt-3 select-none rounded-3xl border border-border bg-card p-4 shadow-card"
-      >
-        <div className="flex items-center justify-between">
-          <button
-            aria-label="Previous player"
-            onClick={() => setPlayerIdx((i) => Math.max(0, i - 1))}
-            disabled={playerIdx === 0}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-muted-foreground disabled:opacity-30"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <div className="flex min-w-0 flex-1 flex-col items-center px-3">
-            <div
-              className={cn(
-                "flex h-12 w-12 items-center justify-center rounded-full text-base font-extrabold",
-                player.team === "Eagles"
-                  ? "bg-primary/15 text-primary"
-                  : "bg-bubble/15 text-bubble",
-              )}
-            >
-              {player.initials}
-            </div>
-            <div className="mt-2 truncate text-base font-bold">{player.name}</div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {player.team} · Thru {player.thru} · {fmtToPar(player.toPar)}
-            </div>
-            <button
-              type="button"
-              onClick={() => setRoundOpen(true)}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-surface"
-            >
-              <ListChecks className="h-3 w-3" /> View round
-            </button>
+      {/* Group scoring — one row per player */}
+      <section className="mx-4 mt-3 select-none rounded-3xl border border-border bg-card p-3 shadow-card">
+        <div className="mb-2 flex items-center justify-between px-1">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            Group · {groupPlayers.length} {groupPlayers.length === 1 ? "player" : "players"}
           </div>
-          <button
-            aria-label="Next player"
-            onClick={() => setPlayerIdx((i) => Math.min(seedPlayers.length - 1, i + 1))}
-            disabled={playerIdx === seedPlayers.length - 1}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-muted-foreground disabled:opacity-30"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+          <div className="font-tabular text-[11px] font-bold text-muted-foreground">
+            {enteredCount}/{groupPlayers.length} entered
+          </div>
         </div>
 
-        {/* Progress dots */}
-        <div className="mt-3 flex items-center justify-center gap-1.5">
-          {seedPlayers.map((p, i) => (
-            <span
-              key={p.id}
-              className={cn(
-                "h-1.5 rounded-full transition-all",
-                i === playerIdx ? "w-6 bg-primary" : "w-1.5 bg-border",
-              )}
-            />
-          ))}
-        </div>
-
-        {/* Giant score buttons */}
-        <div className={cn("mt-4 grid grid-cols-3 gap-2.5", isLocked && "opacity-50")}>
-          {options.map((o) => {
-            const active = current === o.stroke;
+        <ul className={cn("flex flex-col gap-2", isLocked && "opacity-60")}>
+          {groupPlayers.map((p) => {
+            const cur = scores[p.id]?.[hole];
             return (
-              <button
-                key={o.stroke}
-                onClick={() => enter(o.stroke)}
-                disabled={isLocked}
-                className={cn(
-                  "group relative flex h-24 flex-col items-center justify-center rounded-2xl border text-foreground transition-all active:scale-[0.97]",
-                  isLocked && "cursor-not-allowed",
-                  active
-                    ? "border-transparent bg-gradient-to-b from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] text-primary-foreground shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
-                    : "border-border bg-surface hover:bg-surface-2",
-                )}
+              <li
+                key={p.id}
+                className="rounded-2xl border border-border bg-surface/60 p-2.5"
               >
-                <span className="font-tabular text-3xl font-extrabold leading-none">{o.stroke}</span>
-                <span
-                  className={cn(
-                    "mt-1 text-[10px] font-bold uppercase tracking-wider",
-                    active ? "text-primary-foreground/85" : colorForLabel(o.label),
-                  )}
-                >
-                  {o.label}
-                </span>
-                {active && (
-                  <Check className="absolute right-2 top-2 h-3.5 w-3.5 text-primary-foreground/90" />
-                )}
-              </button>
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-extrabold",
+                      p.team === "Eagles" ? "bg-primary/15 text-primary" : "bg-bubble/15 text-bubble",
+                    )}
+                  >
+                    {p.initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-bold leading-tight">{p.name}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Thru {p.thru} · {fmtToPar(p.toPar)}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <div
+                      className={cn(
+                        "flex h-9 w-12 items-center justify-center rounded-lg border font-tabular text-base font-extrabold",
+                        cur != null
+                          ? "border-primary/40 bg-primary/10 text-foreground"
+                          : "border-dashed border-border bg-surface text-muted-foreground",
+                      )}
+                    >
+                      {cur ?? "—"}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRoundOpen(p.id)}
+                      aria-label={`View ${p.name}'s round`}
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <ListChecks className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-2 grid grid-cols-6 gap-1.5">
+                  {options.map((o) => {
+                    const active = cur === o.stroke;
+                    return (
+                      <button
+                        key={o.stroke}
+                        onClick={() => enter(p.id, o.stroke)}
+                        disabled={isLocked}
+                        className={cn(
+                          "relative flex h-12 flex-col items-center justify-center rounded-xl border text-foreground transition-all active:scale-[0.97]",
+                          isLocked && "cursor-not-allowed",
+                          active
+                            ? "border-transparent bg-gradient-to-b from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] text-primary-foreground shadow-[0_4px_14px_-6px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
+                            : "border-border bg-surface hover:bg-surface-2",
+                        )}
+                      >
+                        <span className="font-tabular text-base font-extrabold leading-none">{o.stroke}</span>
+                        <span
+                          className={cn(
+                            "mt-0.5 text-[8px] font-bold uppercase tracking-wider leading-none",
+                            active ? "text-primary-foreground/85" : colorForLabel(o.label),
+                          )}
+                        >
+                          {o.label}
+                        </span>
+                        {active && (
+                          <Check className="absolute right-1 top-1 h-2.5 w-2.5 text-primary-foreground/90" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
+
         {isLocked && (
-          <div className="mt-2 flex items-center justify-center gap-1.5 rounded-xl border border-bubble/30 bg-bubble/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-bubble">
+          <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-bubble/30 bg-bubble/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-bubble">
             <Lock className="h-3 w-3" /> Hole {hole} finalized — edits disabled
           </div>
         )}
 
-        {/* Footer row */}
-        <div className="mt-4 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          <span>{completed}/18 holes scored</span>
+        {/* Submit / next-hole action */}
+        <div className="mt-3 flex items-center gap-2">
           <button
             onClick={undo}
             disabled={!lastEntry}
-            className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-foreground disabled:opacity-30"
+            className="flex h-11 items-center gap-1.5 rounded-xl bg-surface-2 px-3 text-[11px] font-bold uppercase tracking-wider text-foreground disabled:opacity-30"
           >
-            <Undo2 className="h-3 w-3" /> Undo
+            <Undo2 className="h-3.5 w-3.5" /> Undo
+          </button>
+          <button
+            onClick={submitNext}
+            disabled={hole >= 18}
+            className={cn(
+              "flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-extrabold uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-40",
+              allEntered
+                ? "bg-gradient-to-r from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] text-primary-foreground shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
+                : "border border-border bg-surface text-foreground",
+            )}
+          >
+            {hole >= 18 ? "Finish round" : `Submit · Hole ${hole + 1}`}
+            {hole < 18 && <ArrowRight className="h-4 w-4" />}
           </button>
         </div>
 
-        <p className="mt-3 text-center text-[10px] text-muted-foreground">
-          Swipe ← → players · Swipe ↑ ↓ holes · Tap a score to auto-save
+        <p className="mt-2 text-center text-[10px] text-muted-foreground">
+          Tap a score for each player · Submit advances to the next hole
         </p>
       </section>
 
       <RoundDrawer
-        open={roundOpen}
-        onOpenChange={setRoundOpen}
-        playerName={player.name}
-        playerTeam={player.team}
+        open={openPlayer != null}
+        onOpenChange={(o) => !o && setRoundOpen(null)}
+        playerName={openPlayer?.name ?? ""}
+        playerTeam={openPlayer?.team ?? "Eagles"}
         pars={PARS}
-        scores={scores[player.id] ?? {}}
+        scores={openPlayer ? scores[openPlayer.id] ?? {} : {}}
         lockedHoles={lockedHoles}
         currentHole={hole}
         onJump={(h) => {
           setHole(h);
-          setRoundOpen(false);
+          setRoundOpen(null);
         }}
         onClear={(h) => {
+          if (!openPlayer) return;
           if (lockedHoles.includes(h)) {
             toast.error(`Hole ${h} is locked`);
             return;
           }
-          const prev = scores[player.id]?.[h];
-          setLastEntry({ pid: player.id, hole: h, prev });
+          const pid = openPlayer.id;
+          const prev = scores[pid]?.[h];
+          setLastEntry({ pid, hole: h, prev });
           setLocalScores((m) => {
-            const cur = { ...(m[player.id] ?? {}) };
+            const cur = { ...(m[pid] ?? {}) };
             delete cur[h];
-            return { ...m, [player.id]: cur };
+            return { ...m, [pid]: cur };
           });
-          if (eventId != null) clear({ playerId: player.id, holeNumber: h });
+          if (eventId != null) clear({ playerId: pid, holeNumber: h });
         }}
       />
 
