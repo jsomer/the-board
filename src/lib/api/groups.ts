@@ -13,8 +13,16 @@ export interface EventGroup {
   members: GroupMember[];
 }
 
-export function listGroups(eventId: number | string) {
-  return api<EventGroup[]>(`/events/${eventId}/groups`);
+export async function listGroups(eventId: number | string): Promise<EventGroup[]> {
+  const raw = await api<unknown>(`/events/${eventId}/groups`);
+  if (Array.isArray(raw)) return raw as EventGroup[];
+  if (raw && typeof raw === "object") {
+    const r = raw as Record<string, unknown>;
+    for (const k of ["groups", "data", "items", "results"]) {
+      if (Array.isArray(r[k])) return r[k] as EventGroup[];
+    }
+  }
+  return [];
 }
 
 export function createGroup(
