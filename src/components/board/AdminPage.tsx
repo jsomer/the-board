@@ -270,8 +270,19 @@ export function AdminPage() {
           eventId != null ? (
             <GroupsManager eventId={eventId} rawEvent={rawEvent} />
           ) : (
-            <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              Create or load an event before setting up groups.
+            <div className="rounded-2xl border border-border bg-card p-4 text-sm">
+              <p className="font-semibold text-foreground">No active event</p>
+              <p className="mt-1 text-muted-foreground">
+                Groups belong to an event. Create a new event (or open an existing one) before setting up groups.
+              </p>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary-foreground shadow-card"
+                >
+                  <Plus className="h-3 w-3" /> Create event
+                </button>
+              )}
             </div>
           )
         )}
