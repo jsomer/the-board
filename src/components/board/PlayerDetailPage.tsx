@@ -607,7 +607,21 @@ function HoleDetailSheet({
           </div>
         )}
 
-        {/* Skin */}
+        {/* Score editor */}
+        {canEdit && holeNumber != null && (
+          <ScoreEditor
+            hole={holeNumber}
+            par={par}
+            current={playerRow?.score ?? null}
+            isLocked={isLocked}
+            syncStatus={syncStatus}
+            savedTick={savedTick}
+            onSet={(g) => onSetScore(holeNumber, g)}
+            onClear={() => onClearScore(holeNumber)}
+          />
+        )}
+
+
         <div className="mt-3 flex items-center gap-3 rounded-2xl border border-gold/25 bg-gradient-to-r from-gold/10 via-gold/5 to-transparent p-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/20 text-gold">
             <Flame className="h-5 w-5" />
