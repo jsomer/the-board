@@ -222,7 +222,7 @@ export function FastScoring() {
       <div className="mt-2 flex gap-1 overflow-x-auto px-4 pb-1">
         {PARS.map((_, i) => {
           const h = i + 1;
-          const filled = scores[player.id]?.[h] != null;
+          const filled = groupPlayers.length > 0 && groupPlayers.every((p) => scores[p.id]?.[h] != null);
           const active = h === hole;
           const lk = lockedHoles.includes(h);
           return (
