@@ -13,9 +13,10 @@ export function quotasFromEvent(evt: EventRecord | null): Record<string, number>
 /** Convert SkinsState into the per-hole list the UI uses. */
 export function skinRowsFromState(skins: SkinsState | null): HoleSkin[] {
   if (!skins) return [];
-  const perHoleBase =
-    skins.participants.length > 0 && skins.pot > 0 ? skins.pot / 18 : 5;
-  return skins.holes.map((h) => ({
+  const participants = Array.isArray(skins.participants) ? skins.participants : [];
+  const holes = Array.isArray(skins.holes) ? skins.holes : [];
+  const perHoleBase = participants.length > 0 && skins.pot > 0 ? skins.pot / 18 : 5;
+  return holes.map((h) => ({
     hole: h.hole,
     winner: h.winner != null ? String(h.winner) : null,
     value: Math.round((h.carryIn + 1) * perHoleBase),
