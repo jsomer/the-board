@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireAuthAndEvent } from "@/lib/board/entryGuard";
 import { QuotaLeaderboardPage } from "@/components/board/QuotaLeaderboardPage";
 
 export const Route = createFileRoute("/leaderboard")({
+  beforeLoad: () => requireAuthAndEvent(),
   head: () => ({
     meta: [
       { title: "Leaderboard — The Board" },

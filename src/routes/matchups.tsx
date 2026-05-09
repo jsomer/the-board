@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireAuthAndEvent } from "@/lib/board/entryGuard";
 import { MatchupsPage } from "@/components/board/MatchupsPage";
 
 export const Route = createFileRoute("/matchups")({
+  beforeLoad: () => requireAuthAndEvent(),
   head: () => ({
     meta: [
       { title: "Matchups — The Board" },

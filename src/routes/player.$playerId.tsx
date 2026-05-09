@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireAuthAndEvent } from "@/lib/board/entryGuard";
 import { PlayerDetailPage } from "@/components/board/PlayerDetailPage";
 
 export const Route = createFileRoute("/player/$playerId")({
+  beforeLoad: () => requireAuthAndEvent(),
   head: () => ({
     meta: [
       { title: "Player Detail — The Board" },
