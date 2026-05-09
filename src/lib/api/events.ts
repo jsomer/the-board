@@ -1,16 +1,37 @@
 import { api } from "./client";
 import type { EventRecord, SideBet } from "./types";
 
+// Defensively unwrap an API response that may be an array, or an object
+// wrapping an array under a common key (data/items/results/<key>).
+function asArray<T = unknown>(raw: unknown, key?: string): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === "object") {
+    const r = raw as Record<string, unknown>;
+    if (key && Array.isArray(r[key])) return r[key] as T[];
+    for (const k of ["data", "items", "results", "rows"]) {
+      if (Array.isArray(r[k])) return r[k] as T[];
+    }
+  }
+  return [];
+}
+
 function unwrapEvent(raw: Record<string, unknown>): EventRecord {
   const nested = raw.results_json as { players?: unknown } | null | undefined;
+  const topPlayers = (raw as { players?: unknown }).players;
+  const players = Array.isArray(nested?.players)
+    ? nested!.players
+    : Array.isArray(topPlayers)
+      ? topPlayers
+      : [];
   return {
     ...(raw as unknown as EventRecord),
-    players: Array.isArray(nested?.players) ? nested.players : [],
+    players: players as EventRecord["players"],
   };
 }
 
 export async function listEvents(): Promise<EventRecord[]> {
-  const rows = await api<Record<string, unknown>[]>("/events");
+  const raw = await api<unknown>("/events");
+  const rows = asArray<Record<string, unknown>>(raw, "events");
   return rows.map(unwrapEvent);
 }
 
