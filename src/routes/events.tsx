@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, LogOut, Calendar, Users, DollarSign, Loader2, Trophy } from "lucide-react";
+import { Plus, LogOut, Calendar, Users, DollarSign, Loader2, Trophy, Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { listEvents } from "@/lib/api/events";
 import { requireAuth } from "@/lib/board/entryGuard";
 import { isAuthenticated, getStoredIsAdmin, logout as apiLogout } from "@/lib/api/auth";
