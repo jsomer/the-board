@@ -26,8 +26,13 @@ function LoginPage() {
     try {
       await login(email, password);
       setAuthed(true);
+      // Clear any stale event selection from a previous session so the
+      // user always lands on the picker after sign-in.
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("activeEventId");
+      }
       // Hard reload to repopulate React Query / context with token
-      window.location.href = "/";
+      window.location.href = "/events";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed");
     } finally {
