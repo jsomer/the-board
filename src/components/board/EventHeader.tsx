@@ -1,4 +1,5 @@
-import { Radio } from "lucide-react";
+import { Radio, ArrowLeftRight } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useBoardData } from "@/lib/board/context";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { StatusBar } from "./StatusBar";
