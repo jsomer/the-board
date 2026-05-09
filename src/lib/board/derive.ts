@@ -53,13 +53,14 @@ export function scoreVsField(p: EventPlayer, pars: number[], scoring: ScoringTyp
 }
 
 export function skinsCountFor(playerId: string | number, skins: SkinsState | null): number {
-  if (!skins) return 0;
+  if (!skins || !Array.isArray(skins.holes)) return 0;
   return skins.holes.filter((h) => String(h.winner) === String(playerId)).length;
 }
 
 export function holeSkinValue(skins: SkinsState | null, hole: number): number {
-  if (!skins || !skins.participants.length) return 0;
-  const h = skins.holes.find((x) => x.hole === hole);
+  if (!skins || !Array.isArray(skins.participants) || !skins.participants.length) return 0;
+  const holes = Array.isArray(skins.holes) ? skins.holes : [];
+  const h = holes.find((x) => x.hole === hole);
   const carry = h?.carryIn ?? 0;
   const perHole = skins.pot / 18 / Math.max(1, skins.participants.length);
   return Math.round((carry + 1) * perHole * skins.participants.length); // total $ on this hole
@@ -70,8 +71,8 @@ export function projectedPayouts(
   ranked: EventPlayer[],
 ): Map<string, number> {
   const out = new Map<string, number>();
-  const breakdown = event.payout_breakdown_json;
-  if (!breakdown || breakdown.length === 0) {
+  const breakdown = Array.isArray(event.payout_breakdown_json) ? event.payout_breakdown_json : [];
+  if (breakdown.length === 0) {
     return out;
   }
   for (let i = 0; i < ranked.length; i++) {
@@ -83,8 +84,9 @@ export function projectedPayouts(
   return out;
 }
 
-export function findSkinsState(sideBets: SideBet[] | undefined): SkinsState | null {
-  const sb = sideBets?.find((b) => b.type === "skins");
+export function findSkinsState(sideBets: SideBet[] | undefined | null): SkinsState | null {
+  const list = Array.isArray(sideBets) ? sideBets : [];
+  const sb = list.find((b) => b.type === "skins");
   return (sb?.state as SkinsState) ?? null;
 }
 
