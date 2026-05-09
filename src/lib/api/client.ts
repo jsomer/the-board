@@ -83,9 +83,14 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
   });
 
   if (res.status === 401 && auth && !_retry) {
-    const ok = await refreshAccessToken();
-    if (ok) return api<T>(path, { ...opts, _retry: true });
-    clearTokens();
+    // Only attempt refresh + token wipe when we actually have a refresh
+    // token. A 401 on a single endpoint (permissions, stale cache, etc.)
+    // should NOT silently sign the user out of the whole app.
+    if (getRefreshToken()) {
+      const ok = await refreshAccessToken();
+      if (ok) return api<T>(path, { ...opts, _retry: true });
+      clearTokens();
+    }
   }
 
   if (!res.ok) {
