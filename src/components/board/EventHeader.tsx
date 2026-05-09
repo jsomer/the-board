@@ -35,7 +35,17 @@ export function EventHeader() {
             {isMock && <span className="ml-1.5 rounded bg-bubble/15 px-1 py-px text-[9px] font-bold uppercase tracking-wider text-bubble">Demo</span>}
           </p>
         </div>
-        <ThemeSwitcher />
+        <div className="flex items-center gap-1.5">
+          <Link
+            to="/events"
+            className="flex items-center gap-1 rounded-full border border-border bg-surface/70 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+            aria-label="Switch event"
+          >
+            <ArrowLeftRight className="h-3 w-3" />
+            Switch
+          </Link>
+          <ThemeSwitcher />
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 px-4">
