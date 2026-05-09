@@ -83,9 +83,3 @@ export function unlockHoleRequest(eventId: number | string, hole: number) {
   });
 }
 
-export function pickActiveEvent(events: EventRecord[]): EventRecord | null {
-  if (!events.length) return null;
-  // Prefer most recent draft; fall back to most recent final
-  const sorted = [...events].sort((a, b) => b.id - a.id);
-  return sorted.find((e) => e.status === "draft") ?? sorted[0];
-}
