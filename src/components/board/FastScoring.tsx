@@ -70,25 +70,39 @@ export function FastScoring() {
     return map;
   }, [rawEvent, seedPlayers, PARS, localScores]);
 
-  const [playerIdx, setPlayerIdx] = useState(0);
+  const { meId, isAdmin } = useMe();
   const [hole, setHole] = useState(event.hole);
   const [savedFlash, setSavedFlash] = useState(false);
   const [lastEntry, setLastEntry] = useState<{ pid: string; hole: number; prev?: number } | null>(null);
-  const swipeRef = useRef<{ x: number; y: number; t: number } | null>(null);
-  const [roundOpen, setRoundOpen] = useState(false);
+  const [roundOpen, setRoundOpen] = useState<string | null>(null);
 
-  const player = seedPlayers[playerIdx] ?? seedPlayers[0];
-  const par = PARS[hole - 1];
-  const current = player ? scores[player.id]?.[hole] : undefined;
   const { locked: lockedHoles } = useHoleLocks();
   const isLocked = lockedHoles.includes(hole);
+  const par = PARS[hole - 1];
+
+  // Compute the active group's players. Prefer the group containing the
+  // authenticated player; admins fall back to the first group; otherwise
+  // show all players (mock or no-groups mode).
+  const groupPlayers: Player[] = useMemo(() => {
+    const groups = groupsQ.data ?? [];
+    if (groups.length === 0) return seedPlayers;
+    const byId = new Map(seedPlayers.map((p) => [String(p.id), p]));
+    const myGroup = meId
+      ? groups.find((g) => g.members.some((m) => String(m.player_id) === String(meId)))
+      : null;
+    const target = myGroup ?? (isAdmin ? groups[0] : null);
+    if (!target) return seedPlayers;
+    const list = target.members
+      .map((m) => byId.get(String(m.player_id)))
+      .filter((p): p is Player => Boolean(p));
+    return list.length > 0 ? list : seedPlayers;
+  }, [groupsQ.data, seedPlayers, meId, isAdmin]);
 
   // Quick options anchored to par
   const options = useMemo(() => {
     const make = (offset: number) => {
       const stroke = par + offset;
-      const label = labelFor(stroke, par);
-      return { stroke, offset, label };
+      return { stroke, offset, label: labelFor(stroke, par) };
     };
     return [-2, -1, 0, 1, 2, 3].map(make).filter((o) => o.stroke >= 1);
   }, [par]);
@@ -101,35 +115,24 @@ export function FastScoring() {
     return () => window.clearTimeout(t);
   }, [savedTick]);
 
-  const enter = (stroke: number) => {
-    if (!player) return;
+  const enter = (pid: string, stroke: number) => {
     if (isLocked) {
       toast.error(`Hole ${hole} is locked`, { description: "Ask an admin to unlock it before editing." });
       return;
     }
-    const prev = scores[player.id]?.[hole];
-    setLastEntry({ pid: player.id, hole, prev });
-    // Local optimistic write — instant feedback, also covers mock/no-event mode
-    setLocalScores((m) => ({ ...m, [player.id]: { ...(m[player.id] ?? {}), [hole]: stroke } }));
+    const prev = scores[pid]?.[hole];
+    setLastEntry({ pid, hole, prev });
+    setLocalScores((m) => ({ ...m, [pid]: { ...(m[pid] ?? {}), [hole]: stroke } }));
     if (eventId != null) {
-      queue({
-        playerId: player.id,
-        holeNumber: hole,
-        grossScore: stroke,
-        prevScore: prev ?? 0,
-      });
+      queue({ playerId: pid, holeNumber: hole, grossScore: stroke, prevScore: prev ?? 0 });
     } else {
       setSavedFlash(true);
       window.setTimeout(() => setSavedFlash(false), 700);
     }
-    // Auto-advance
-    window.setTimeout(() => {
-      if (playerIdx < seedPlayers.length - 1) setPlayerIdx((i) => i + 1);
-      else {
-        setPlayerIdx(0);
-        setHole((h) => Math.min(18, h + 1));
-      }
-    }, 220);
+  };
+
+  const submitNext = () => {
+    setHole((h) => Math.min(18, h + 1));
   };
 
   const undo = () => {
@@ -138,7 +141,6 @@ export function FastScoring() {
       toast.error(`Hole ${lastEntry.hole} is locked`);
       return;
     }
-    // Revert local overlay
     setLocalScores((m) => {
       const cur = { ...(m[lastEntry.pid] ?? {}) };
       if (lastEntry.prev == null || lastEntry.prev < 1) delete cur[lastEntry.hole];
@@ -160,45 +162,9 @@ export function FastScoring() {
     setLastEntry(null);
   };
 
-  // Keyboard support
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") setPlayerIdx((i) => Math.max(0, i - 1));
-      else if (e.key === "ArrowRight") setPlayerIdx((i) => Math.min(seedPlayers.length - 1, i + 1));
-      else if (e.key === "ArrowUp") setHole((h) => Math.min(18, h + 1));
-      else if (e.key === "ArrowDown") setHole((h) => Math.max(1, h - 1));
-      else if (/^[1-9]$/.test(e.key)) enter(parseInt(e.key, 10));
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
-
-  // Swipe handlers
-  const onTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    swipeRef.current = { x: t.clientX, y: t.clientY, t: Date.now() };
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    const s = swipeRef.current;
-    if (!s) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - s.x;
-    const dy = t.clientY - s.y;
-    const adx = Math.abs(dx);
-    const ady = Math.abs(dy);
-    const dt = Date.now() - s.t;
-    if (dt > 500) return;
-    if (adx > 50 && adx > ady) {
-      if (dx < 0) setPlayerIdx((i) => Math.min(seedPlayers.length - 1, i + 1));
-      else setPlayerIdx((i) => Math.max(0, i - 1));
-    } else if (ady > 50 && ady > adx) {
-      if (dy < 0) setHole((h) => Math.min(18, h + 1));
-      else setHole((h) => Math.max(1, h - 1));
-    }
-    swipeRef.current = null;
-  };
-
-  const completed = Object.values(scores[player.id] ?? {}).filter((v) => v != null).length;
+  const enteredCount = groupPlayers.filter((p) => scores[p.id]?.[hole] != null).length;
+  const allEntered = enteredCount === groupPlayers.length && groupPlayers.length > 0;
+  const openPlayer = roundOpen ? groupPlayers.find((p) => p.id === roundOpen) ?? null : null;
 
   return (
     <main className="mx-auto min-h-screen max-w-xl pb-28">
