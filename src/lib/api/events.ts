@@ -40,8 +40,16 @@ export async function getEvent(id: number | string): Promise<EventRecord> {
   return unwrapEvent(raw);
 }
 
-export function getSideBets(id: number | string) {
-  return api<SideBet[]>(`/events/${id}/side-bets`);
+export async function getSideBets(id: number | string): Promise<SideBet[]> {
+  const raw = await api<unknown>(`/events/${id}/side-bets`);
+  return asArray<SideBet>(raw, "sideBets");
+}
+
+export function pickActiveEvent(events: EventRecord[] | null | undefined): EventRecord | null {
+  const list = Array.isArray(events) ? events : [];
+  if (!list.length) return null;
+  const sorted = [...list].sort((a, b) => b.id - a.id);
+  return sorted.find((e) => e.status === "draft") ?? sorted[0];
 }
 
 export interface HoleScorePayload {
