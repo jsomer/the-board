@@ -351,7 +351,13 @@ export function PlayerDetailPage() {
               const tone = off < 0 ? "money" : off === 0 ? "muted" : "down";
               const toneCls = tone === "money" ? "border-money/30 bg-money/10 text-money" : tone === "down" ? "border-down/25 bg-down/10 text-down" : "border-border bg-card text-foreground";
               return (
-                <li key={h.hole} className={cn("rounded-xl border p-2", toneCls)}>
+                <li key={h.hole}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenHole(h.hole)}
+                    aria-label={`Edit hole ${h.hole}`}
+                    className={cn("w-full rounded-xl border p-2 text-left transition-all active:scale-[0.97]", toneCls)}
+                  >
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">H{h.hole} · P{h.par}</span>
                     {h.wonSkin && <Flame className="h-3 w-3 text-gold" />}
