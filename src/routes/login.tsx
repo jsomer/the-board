@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { login, logout, isAuthenticated } from "@/lib/api/auth";
 
 export const Route = createFileRoute("/login")({
