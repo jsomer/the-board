@@ -53,8 +53,11 @@ function EventsPickerPage() {
   const enter = (id: number) => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(ACTIVE_EVENT_KEY, String(id));
+      // Hard navigation: forces BoardDataProvider to re-read activeEventId on mount.
+      window.location.href = `/?eventId=${id}`;
+      return;
     }
-    void router.navigate({ to: "/", search: { eventId: id } as never });
+    void router.navigate({ to: "/" });
   };
 
   const handleLogout = () => {
