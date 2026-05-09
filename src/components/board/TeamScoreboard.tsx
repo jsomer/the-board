@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 export function TeamScoreboard() {
   const { teams } = useBoardData();
+  if (!Array.isArray(teams) || teams.length < 2) return null;
   const [a, b] = teams;
   const lead = Math.abs(a.score - b.score);
   const leader = a.score < b.score ? a : b;
