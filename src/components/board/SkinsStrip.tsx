@@ -18,15 +18,17 @@ export function SkinsStrip() {
 
   const strip: Strip[] = (() => {
     if (!skins || !rawEvent) return FALLBACK;
-    const playerName = (id: string | number) => players.find((p) => p.id === String(id))?.name.split(" ").slice(-1)[0] ?? String(id);
-    const perHoleBase = skins.participants.length > 0 ? skins.pot / 18 : 5;
+    const safePlayers = Array.isArray(players) ? players : [];
+    const skinHoles = Array.isArray(skins.holes) ? skins.holes : [];
+    const participants = Array.isArray(skins.participants) ? skins.participants : [];
+    const playerName = (id: string | number) => safePlayers.find((p) => p.id === String(id))?.name.split(" ").slice(-1)[0] ?? String(id);
+    const perHoleBase = participants.length > 0 ? skins.pot / 18 : 5;
     const liveHole = event.hole;
 
-    // pick 6 holes around the live hole
     const start = Math.max(1, Math.min(13, liveHole - 2));
     const holes = Array.from({ length: 6 }, (_, i) => start + i);
     return holes.map((h) => {
-      const rec = skins.holes.find((x) => x.hole === h);
+      const rec = skinHoles.find((x) => x.hole === h);
       const carry = rec?.carryIn ?? 0;
       const amount = Math.round((carry + 1) * perHoleBase);
       if (rec?.winner != null) return { hole: h, status: "won", amount, who: playerName(rec.winner) };
