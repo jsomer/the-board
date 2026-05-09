@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ScoreRouteImport } from './routes/score'
+import { Route as MyEventsRouteImport } from './routes/my-events'
 import { Route as MatchupsRouteImport } from './routes/matchups'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
@@ -20,6 +21,11 @@ import { Route as PlayerPlayerIdRouteImport } from './routes/player.$playerId'
 const ScoreRoute = ScoreRouteImport.update({
   id: '/score',
   path: '/score',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyEventsRoute = MyEventsRouteImport.update({
+  id: '/my-events',
+  path: '/my-events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MatchupsRoute = MatchupsRouteImport.update({
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
   '/matchups': typeof MatchupsRoute
+  '/my-events': typeof MyEventsRoute
   '/score': typeof ScoreRoute
   '/player/$playerId': typeof PlayerPlayerIdRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
   '/matchups': typeof MatchupsRoute
+  '/my-events': typeof MyEventsRoute
   '/score': typeof ScoreRoute
   '/player/$playerId': typeof PlayerPlayerIdRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
   '/matchups': typeof MatchupsRoute
+  '/my-events': typeof MyEventsRoute
   '/score': typeof ScoreRoute
   '/player/$playerId': typeof PlayerPlayerIdRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/login'
     | '/matchups'
+    | '/my-events'
     | '/score'
     | '/player/$playerId'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/login'
     | '/matchups'
+    | '/my-events'
     | '/score'
     | '/player/$playerId'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/login'
     | '/matchups'
+    | '/my-events'
     | '/score'
     | '/player/$playerId'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   LeaderboardRoute: typeof LeaderboardRoute
   LoginRoute: typeof LoginRoute
   MatchupsRoute: typeof MatchupsRoute
+  MyEventsRoute: typeof MyEventsRoute
   ScoreRoute: typeof ScoreRoute
   PlayerPlayerIdRoute: typeof PlayerPlayerIdRoute
 }
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/score'
       fullPath: '/score'
       preLoaderRoute: typeof ScoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-events': {
+      id: '/my-events'
+      path: '/my-events'
+      fullPath: '/my-events'
+      preLoaderRoute: typeof MyEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/matchups': {
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   LeaderboardRoute: LeaderboardRoute,
   LoginRoute: LoginRoute,
   MatchupsRoute: MatchupsRoute,
+  MyEventsRoute: MyEventsRoute,
   ScoreRoute: ScoreRoute,
   PlayerPlayerIdRoute: PlayerPlayerIdRoute,
 }

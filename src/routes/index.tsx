@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { EventHeader } from "@/components/board/EventHeader";
 import { Ticker } from "@/components/board/Ticker";
 import { TeamScoreboard } from "@/components/board/TeamScoreboard";
@@ -7,8 +7,14 @@ import { Leaderboard } from "@/components/board/Leaderboard";
 import { BottomNav } from "@/components/board/BottomNav";
 import { PullToRefresh } from "@/components/board/PullToRefresh";
 import { useBoardData } from "@/lib/board/context";
+import { isAuthenticated, getStoredIsAdmin } from "@/lib/api/auth";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: () => {
+    if (isAuthenticated() && !getStoredIsAdmin()) {
+      throw redirect({ to: "/my-events" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "The Board — Live Golf Competition" },

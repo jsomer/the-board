@@ -14,7 +14,9 @@ export interface EventPlayer {
 
 export interface EventRecord {
   id: number;
-  name: string;
+  event_code: string;        // auto-generated 6-char alphanumeric, primary display identifier
+  name: string;              // legacy field, set to event_code on creation
+  event_date?: string | null;
   course_name?: string;
   scoring_type: ScoringType;
   status: EventStatus;
@@ -22,8 +24,8 @@ export interface EventRecord {
   hole_pars: number[]; // length 18
   payout_breakdown_json?: { rank: number; pct: number }[] | null;
   players: EventPlayer[];
-  teams_json?: Record<string, string> | null; // playerId -> teamName (when backend ships it)
-  locked_holes?: number[]; // server-managed list of finalized hole numbers
+  teams_json?: Record<string, string> | null;
+  locked_holes?: number[];
 }
 
 export interface MeResponse {

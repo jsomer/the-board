@@ -181,6 +181,8 @@ export function deriveTeams(players: Player[]): Team[] {
 
 export interface BoardEvent {
   name: string;
+  eventCode: string;
+  eventDate: string | null;
   format: string;
   pot: number;
   skinsPot: number;
@@ -192,7 +194,9 @@ export function deriveEvent(event: EventRecord, sideBets: SideBet[] | undefined)
   const skins = findSkinsState(sideBets);
   const maxThru = Math.max(0, ...event.players.map((p) => thruHoles(p.holeScores)));
   return {
-    name: event.name,
+    name: event.event_code ?? event.name,
+    eventCode: event.event_code ?? event.name,
+    eventDate: event.event_date ?? null,
     format: formatString(event),
     pot: event.total_pot,
     skinsPot: skins?.pot ?? 0,

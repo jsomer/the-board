@@ -85,7 +85,9 @@ export const tickerItems = [
 ];
 
 export const event = {
-  name: "Saturday Skins @ Pinehurst",
+  name: "DEMO01",
+  eventCode: "DEMO01",
+  eventDate: null,
   format: "Stroke + Skins • $20 entry",
   pot: 320,
   skinsPot: 80,

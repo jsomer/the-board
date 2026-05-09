@@ -21,9 +21,14 @@ export function EventHeader() {
               Live · Hole {event.hole}/{event.totalHoles}
             </span>
           </div>
-          <h1 className="mt-1 truncate text-[22px] font-extrabold leading-tight tracking-tight">
-            {event.name}
+          <h1 className="mt-1 font-mono text-[26px] font-extrabold leading-tight tracking-widest">
+            {event.eventCode ?? event.name}
           </h1>
+          {event.eventDate && (
+            <p className="text-[11px] font-semibold text-muted-foreground">
+              {new Date(event.eventDate + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">
             {event.format}
             {isMock && <span className="ml-1.5 rounded bg-bubble/15 px-1 py-px text-[9px] font-bold uppercase tracking-wider text-bubble">Demo</span>}
