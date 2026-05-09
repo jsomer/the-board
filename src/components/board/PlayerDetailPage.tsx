@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity, Ruler, X } from "lucide-react";
+import { ArrowLeft, ArrowDown, ArrowUp, DollarSign, Flame, Target, TrendingUp, TrendingDown, Minus, Trophy, Flag, Activity, Ruler, X, Lock, Pencil, Check, Loader2, CloudOff } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
 import { quotasFromEvent, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
@@ -9,6 +10,10 @@ import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { useMe } from "@/hooks/useMe";
+import { useHoleScoreSync, type SyncStatus } from "@/hooks/useHoleScoreSync";
+import { useHoleLocks } from "@/lib/board/holeLocks";
+import { listGroups } from "@/lib/api/groups";
 
 // Default quota when nothing is on the event yet
 const DEFAULT_QUOTA = 30;
