@@ -487,6 +487,12 @@ export function PlayerDetailPage() {
         playerName={player.name}
         fieldHoles={fieldHoles}
         skinResults={skinResults}
+        canEdit={canEditPlayer}
+        isLocked={openHole != null && locked.includes(openHole)}
+        syncStatus={status}
+        savedTick={savedTick}
+        onSetScore={setHoleScore}
+        onClearScore={clearHoleScore}
       />
     </main>
   );
@@ -496,6 +502,7 @@ type FieldHoles = { player: Player; rows: HoleRow[] }[];
 
 function HoleDetailSheet({
   holeNumber, onClose, playerRow, playerName, fieldHoles, skinResults,
+  canEdit, isLocked, syncStatus, savedTick, onSetScore, onClearScore,
 }: {
   holeNumber: number | null;
   onClose: () => void;
@@ -503,6 +510,12 @@ function HoleDetailSheet({
   playerName: string;
   fieldHoles: FieldHoles;
   skinResults: HoleSkin[];
+  canEdit: boolean;
+  isLocked: boolean;
+  syncStatus: SyncStatus;
+  savedTick: number;
+  onSetScore: (hole: number, gross: number) => void;
+  onClearScore: (hole: number) => void;
 }) {
   const open = holeNumber !== null && playerRow !== null;
   const par = playerRow?.par ?? 0;
