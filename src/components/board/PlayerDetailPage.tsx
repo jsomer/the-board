@@ -826,3 +826,131 @@ function fmtToPar(n: number) {
   if (n === 0) return "E";
   return n > 0 ? `+${n}` : `${n}`;
 }
+
+function ScoreEditor({
+  hole, par, current, isLocked, syncStatus, savedTick, onSet, onClear,
+}: {
+  hole: number;
+  par: number;
+  current: number | null;
+  isLocked: boolean;
+  syncStatus: SyncStatus;
+  savedTick: number;
+  onSet: (gross: number) => void;
+  onClear: () => void;
+}) {
+  const [draft, setDraft] = useState<number>(current ?? par);
+  const [flash, setFlash] = useState(false);
+
+  // Reset draft when opening a different hole / score updates from server.
+  useEffect(() => { setDraft(current ?? par); }, [hole, current, par]);
+
+  // Saved-flash on successful sync.
+  useEffect(() => {
+    if (savedTick === 0) return;
+    setFlash(true);
+    const t = window.setTimeout(() => setFlash(false), 900);
+    return () => window.clearTimeout(t);
+  }, [savedTick]);
+
+  const commit = (next: number) => {
+    const clamped = Math.max(1, Math.min(12, next));
+    setDraft(clamped);
+    onSet(clamped);
+  };
+
+  const presets = [par - 2, par - 1, par, par + 1, par + 2].filter((v) => v >= 1 && v <= 12);
+
+  if (isLocked) {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border bg-card p-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <Lock className="h-3.5 w-3.5" />
+        Hole locked — score cannot be edited
+      </div>
+    );
+  }
+
+  const toPar = draft - par;
+  const toneCls =
+    toPar < 0 ? "border-money/30 bg-money/5"
+    : toPar === 0 ? "border-border bg-card"
+    : "border-down/25 bg-down/5";
+
+  return (
+    <div className={cn("mt-3 rounded-2xl border p-3", toneCls)}>
+      <div className="mb-2 flex items-center gap-2">
+        <Pencil className="h-3.5 w-3.5 text-primary" />
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+          Edit score
+        </h3>
+        <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+          {syncStatus === "saving" && (
+            <span className="flex items-center gap-1 text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Saving</span>
+          )}
+          {syncStatus === "offline" && (
+            <span className="flex items-center gap-1 text-down"><CloudOff className="h-3 w-3" /> Offline</span>
+          )}
+          {syncStatus === "error" && (
+            <span className="text-down">Retrying…</span>
+          )}
+          {(syncStatus === "saved" || flash) && syncStatus !== "saving" && syncStatus !== "offline" && syncStatus !== "error" && (
+            <span className="flex items-center gap-1 text-money"><Check className="h-3 w-3" /> Saved</span>
+          )}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => commit(draft - 1)}
+          aria-label="Decrease strokes"
+          className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-surface-2 text-xl font-extrabold active:scale-95"
+        >
+          −
+        </button>
+        <div className="flex flex-1 flex-col items-center">
+          <span className="font-tabular text-4xl font-extrabold leading-none">{draft}</span>
+          <span className="mt-1 font-tabular text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            {fmtToPar(toPar)} · Par {par}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => commit(draft + 1)}
+          aria-label="Increase strokes"
+          className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-surface-2 text-xl font-extrabold active:scale-95"
+        >
+          +
+        </button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-5 gap-1">
+        {presets.map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => commit(v)}
+            className={cn(
+              "rounded-lg border px-1.5 py-1.5 font-tabular text-sm font-extrabold transition active:scale-95",
+              draft === v
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-foreground hover:bg-surface-2",
+            )}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+
+      {current != null && current > 0 && (
+        <button
+          type="button"
+          onClick={onClear}
+          className="mt-2 w-full rounded-lg border border-dashed border-border px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-surface-2"
+        >
+          Clear hole
+        </button>
+      )}
+    </div>
+  );
+}
