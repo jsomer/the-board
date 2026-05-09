@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Check, Undo2, Flag, Cloud, CloudOff, Loader2, Zap, Lock, ListChecks, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Undo2, Flag, Cloud, CloudOff, Loader2, Zap, Lock, ListChecks, X, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useBoardData } from "@/lib/board/context";
+import { useMe } from "@/hooks/useMe";
 import { useHoleScoreSync } from "@/hooks/useHoleScoreSync";
 import { useHoleLocks } from "@/lib/board/holeLocks";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ import { ThemeSwitcher } from "./ThemeSwitcher";
 import { WhereDoIStand } from "./WhereDoIStand";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
 import { listGroups } from "@/lib/api/groups";
+import type { Player } from "@/data/board";
 
 const DEFAULT_PARS = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 3, 5, 4];
 
