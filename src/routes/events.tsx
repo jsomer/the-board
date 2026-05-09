@@ -147,9 +147,49 @@ function EventsPickerPage() {
         </Section>
       )}
 
-      {finished.length > 0 && (
-        <Section title="Finished" count={finished.length}>
-          {finished.map((e) => <EventCard key={e.id} event={e} onPick={enter} />)}
+      {(finishedAll.length > 0 || filtersActive) && (
+        <Section title="Last Rounds" count={finishedAll.length}>
+          <div className="mb-2 flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search code or course"
+                className="h-9 pl-8 text-sm"
+              />
+            </div>
+            <Input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="h-9 w-[8.5rem] text-sm"
+            />
+            {filtersActive && (
+              <button
+                onClick={() => { setSearch(""); setDateFilter(""); }}
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground"
+                aria-label="Clear filters"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {finished.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-surface p-4 text-center text-sm text-muted-foreground">
+              No rounds match those filters.
+            </div>
+          ) : (
+            finished.map((e) => <EventCard key={e.id} event={e} onPick={enter} />)
+          )}
+          {!filtersActive && !showAllFinished && finishedAll.length > 5 && (
+            <button
+              onClick={() => setShowAllFinished(true)}
+              className="mt-2 w-full rounded-md border border-border bg-surface px-3 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+            >
+              Show all {finishedAll.length}
+            </button>
+          )}
         </Section>
       )}
 
