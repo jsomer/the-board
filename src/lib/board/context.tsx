@@ -186,18 +186,22 @@ export function BoardDataProvider({ children }: { children: ReactNode }) {
     const evt = eventQ.data;
     const sb = sideBetsQ.data ?? undefined;
     if (!evt) {
+      // When the user is signed in but no event is selected/loaded yet,
+      // surface a clean loading state instead of the demo seed data — the
+      // router-level entry guard will have redirected to /events.
+      const showMock = !authed;
       return {
-        players: mockPlayers,
-        teams: mockTeams,
-        event: mockEvent,
-        tickerItems: mockTicker,
+        players: showMock ? mockPlayers : [],
+        teams: showMock ? mockTeams : [],
+        event: showMock ? mockEvent : { ...mockEvent, name: "", eventCode: "", hole: 0 },
+        tickerItems: showMock ? mockTicker : [],
         rawEvent: null,
         sideBets: null,
         skins: null,
         loading: eventQ.isLoading || eventsList.isLoading,
         authed,
         error: currentError,
-        isMock: true,
+        isMock: showMock,
         eventId: resolvedEventId,
         lastUpdatedAt,
         isFetching,

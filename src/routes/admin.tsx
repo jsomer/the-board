@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireAuthAndEvent } from "@/lib/board/entryGuard";
 import { AdminPage } from "@/components/board/AdminPage";
 
 export const Route = createFileRoute("/admin")({
+  beforeLoad: () => requireAuthAndEvent(),
   head: () => ({
     meta: [
       { title: "Admin — The Board" },
