@@ -162,6 +162,21 @@ export function PlayerDetailPage() {
 
   const [openHole, setOpenHole] = useState<number | null>(null);
 
+  // Editing capability: real event, signed in, and either own player or admin.
+  const canEditPlayer = !isMock && !!rawEvent && !!realPlayer && (isAdmin || (meId != null && meId === player.id));
+  const setHoleScore = (hole: number, gross: number) => {
+    if (!canEditPlayer || !realPlayer) return;
+    if (locked.includes(hole)) return;
+    const prev = realPlayer.holeScores[hole - 1] ?? 0;
+    if (gross === prev) return;
+    queue({ playerId: realPlayer.player_id, holeNumber: hole, grossScore: gross, prevScore: prev });
+  };
+  const clearHoleScore = (hole: number) => {
+    if (!canEditPlayer || !realPlayer) return;
+    if (locked.includes(hole)) return;
+    clear({ playerId: realPlayer.player_id, holeNumber: hole });
+  };
+
   const jumpToHole = (hole: number) => {
     const el = document.getElementById(`hole-${hole}`);
     if (el) {
