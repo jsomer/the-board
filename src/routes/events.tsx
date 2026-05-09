@@ -35,6 +35,9 @@ function EventsPickerPage() {
   const isAdmin = getStoredIsAdmin();
   const { meId } = useMe();
   const [showCreate, setShowCreate] = useState(false);
+  const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [showAllFinished, setShowAllFinished] = useState(false);
 
   const { data: events = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["events"],
@@ -49,7 +52,25 @@ function EventsPickerPage() {
     : events.filter((e) => meId != null && e.players.some((p) => String(p.player_id) === String(meId)));
 
   const open = visible.filter((e) => statusGroup(e) === "draft").sort((a, b) => b.id - a.id);
-  const finished = visible.filter((e) => statusGroup(e) === "final").sort((a, b) => b.id - a.id);
+
+  const finishedAll = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return visible
+      .filter((e) => statusGroup(e) === "final")
+      .filter((e) => {
+        if (!q) return true;
+        return (
+          (e.event_code ?? "").toLowerCase().includes(q) ||
+          (e.name ?? "").toLowerCase().includes(q) ||
+          (e.course_name ?? "").toLowerCase().includes(q)
+        );
+      })
+      .filter((e) => (dateFilter ? e.event_date === dateFilter : true))
+      .sort((a, b) => b.id - a.id);
+  }, [visible, search, dateFilter]);
+
+  const filtersActive = search.trim().length > 0 || dateFilter.length > 0;
+  const finished = showAllFinished || filtersActive ? finishedAll : finishedAll.slice(0, 5);
 
   const enter = (id: number) => {
     if (typeof window !== "undefined") {
