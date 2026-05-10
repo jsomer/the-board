@@ -12,6 +12,7 @@ export interface EventPlayer {
   holeScores: number[]; // length 18; 0 = unscored
   thru: number;         // holes with a score > 0; computed by API
   round_complete: boolean; // true when thru === 18
+  winnings?: number;       // place payout, populated after finalization
 }
 
 export type GroupStatus = "scoring" | "needs_review" | "approved";
