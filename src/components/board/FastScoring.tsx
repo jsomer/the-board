@@ -688,3 +688,152 @@ function SaveIndicator({
     </span>
   );
 }
+
+function formatApprovedAt(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function ReviewDialog({
+  open,
+  onOpenChange,
+  group,
+  players,
+  scores,
+  pars,
+  onApprove,
+  approving,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  group: EventGroup | null;
+  players: Player[];
+  scores: Scores;
+  pars: number[];
+  onApprove: () => void;
+  approving: boolean;
+}) {
+  const approved = group?.status === "approved";
+  const front = pars.slice(0, 9);
+  const back = pars.slice(9, 18);
+  const totalPar = pars.reduce((s, p) => s + p, 0);
+
+  const playerTotals = (pid: string) => {
+    const s = scores[pid] ?? {};
+    let outScore = 0, inScore = 0;
+    for (let h = 1; h <= 9; h++) outScore += s[h] ?? 0;
+    for (let h = 10; h <= 18; h++) inScore += s[h] ?? 0;
+    const total = outScore + inScore;
+    const played = Object.values(s).filter((v) => v != null && (v as number) > 0).length;
+    return { outScore, inScore, total, played };
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Review Scorecard{group ? ` · ${group.name}` : ""}</DialogTitle>
+          <DialogDescription>
+            {approved
+              ? `Approved${group?.approved_by_name ? ` by ${group.approved_by_name}` : ""}${group?.approved_at ? ` on ${formatApprovedAt(group.approved_at)}` : ""}.`
+              : "Confirm every score is correct. Approving locks the group's scorecard."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px]">
+            <thead>
+              <tr className="text-muted-foreground">
+                <th className="sticky left-0 bg-background px-2 py-1 text-left font-bold uppercase tracking-wider">Player</th>
+                {front.map((_, i) => (
+                  <th key={`f${i}`} className="px-1 py-1 text-center font-tabular">{i + 1}</th>
+                ))}
+                <th className="px-2 py-1 text-center font-bold uppercase tracking-wider">Out</th>
+                {back.map((_, i) => (
+                  <th key={`b${i}`} className="px-1 py-1 text-center font-tabular">{i + 10}</th>
+                ))}
+                <th className="px-2 py-1 text-center font-bold uppercase tracking-wider">In</th>
+                <th className="px-2 py-1 text-center font-bold uppercase tracking-wider">Tot</th>
+              </tr>
+              <tr className="text-muted-foreground/70">
+                <th className="sticky left-0 bg-background px-2 py-1 text-left font-semibold uppercase tracking-wider">Par</th>
+                {front.map((p, i) => (
+                  <th key={`fp${i}`} className="px-1 py-1 text-center font-tabular font-normal">{p}</th>
+                ))}
+                <th className="px-2 py-1 text-center font-tabular">{front.reduce((a, b) => a + b, 0)}</th>
+                {back.map((p, i) => (
+                  <th key={`bp${i}`} className="px-1 py-1 text-center font-tabular font-normal">{p}</th>
+                ))}
+                <th className="px-2 py-1 text-center font-tabular">{back.reduce((a, b) => a + b, 0)}</th>
+                <th className="px-2 py-1 text-center font-tabular">{totalPar}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((p) => {
+                const s = scores[p.id] ?? {};
+                const t = playerTotals(p.id);
+                return (
+                  <tr key={p.id} className="border-t border-border">
+                    <td className="sticky left-0 bg-background px-2 py-1.5 font-bold">{p.name}</td>
+                    {front.map((par, i) => {
+                      const h = i + 1;
+                      const v = s[h];
+                      return (
+                        <td key={`fs${h}`} className={cn("px-1 py-1.5 text-center font-tabular", v != null && v - par <= -1 && "text-money font-bold", v != null && v - par >= 1 && "text-down")}>
+                          {v ?? "—"}
+                        </td>
+                      );
+                    })}
+                    <td className="px-2 py-1.5 text-center font-tabular font-bold">{t.outScore || "—"}</td>
+                    {back.map((par, i) => {
+                      const h = i + 10;
+                      const v = s[h];
+                      return (
+                        <td key={`bs${h}`} className={cn("px-1 py-1.5 text-center font-tabular", v != null && v - par <= -1 && "text-money font-bold", v != null && v - par >= 1 && "text-down")}>
+                          {v ?? "—"}
+                        </td>
+                      );
+                    })}
+                    <td className="px-2 py-1.5 text-center font-tabular font-bold">{t.inScore || "—"}</td>
+                    <td className="px-2 py-1.5 text-center font-tabular font-extrabold">{t.total || "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <DialogFooter>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="h-10 rounded-xl border border-border bg-surface px-4 text-sm font-bold uppercase tracking-wider"
+          >
+            Close
+          </button>
+          {!approved && (
+            <button
+              type="button"
+              onClick={onApprove}
+              disabled={approving}
+              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] px-4 text-sm font-extrabold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+            >
+              {approving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              {approving ? "Approving…" : "Approve Scores"}
+            </button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
