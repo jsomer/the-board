@@ -20,6 +20,18 @@ export function listPlayers() {
   return api<PlayerRecord[]>("/players");
 }
 
+export interface UpdatePlayerPayload {
+  first_name?: string;
+  last_name?: string;
+  email?: string | null;
+  usga_handicap?: number | null;
+  game_points_needed?: number | null;
+}
+
+export function updatePlayer(id: number | string, body: UpdatePlayerPayload) {
+  return api<PlayerRecord>(`/players/${id}`, { method: "PUT", body });
+}
+
 export function createEvent(payload: CreateEventPayload) {
   return api<EventRecord>("/events", { method: "POST", body: payload });
 }
