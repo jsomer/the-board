@@ -146,6 +146,14 @@ export function AdminPage() {
           </div>
           <div className="flex items-center gap-2">
             {isAdmin && (
+              <Link
+                to="/admin/game-setups"
+                className="rounded-full border border-border px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+              >
+                Setups
+              </Link>
+            )}
+            {isAdmin && (
               <button
                 onClick={() => setShowCreate(true)}
                 className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary-foreground shadow-card"
