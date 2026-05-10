@@ -3,15 +3,6 @@ import { cn } from "@/lib/utils";
 import { useBoardData } from "@/lib/board/context";
 import type { HoleLeader } from "@/lib/api/types";
 
-const FALLBACK: Strip[] = [
-  { hole: 13, status: "clear", low: 3, who: "Reyes", played: 4 },
-  { hole: 14, status: "tied", low: 4, played: 3 },
-  { hole: 15, status: "clear", low: 2, who: "Park", played: 2 },
-  { hole: 16, status: "unplayed", low: null, played: 0 },
-  { hole: 17, status: "unplayed", low: null, played: 0 },
-  { hole: 18, status: "unplayed", low: null, played: 0 },
-];
-
 type Status = "unplayed" | "clear" | "tied";
 type Strip = { hole: number; status: Status; low: number | null; who?: string; played: number };
 
@@ -20,34 +11,28 @@ function lastName(name: string): string {
 }
 
 export function SkinsStrip() {
-  const { rawEvent, event, isMock } = useBoardData();
+  const { rawEvent, event } = useBoardData();
 
-  const strip: Strip[] = (() => {
-    const leaders: HoleLeader[] = Array.isArray(rawEvent?.hole_leaders)
-      ? rawEvent!.hole_leaders
-      : [];
-    // Only show seeded fallback when running on mock data (logged out demo).
-    // For a real event with no leaders yet, render an "open" strip so we never
-    // show bogus winners.
-    if (!rawEvent && isMock) return FALLBACK;
+  const leaders: HoleLeader[] = Array.isArray(rawEvent?.hole_leaders)
+    ? rawEvent!.hole_leaders
+    : [];
 
-    const liveHole = event.hole;
-    const start = Math.max(1, Math.min(13, liveHole - 2));
-    const holes = Array.from({ length: 6 }, (_, i) => start + i);
+  const liveHole = Math.max(1, Math.min(18, event.hole || 1));
+  const start = Math.max(1, Math.min(13, liveHole - 2));
+  const holes = Array.from({ length: 6 }, (_, i) => start + i);
 
-    return holes.map((h) => {
-      const rec = leaders.find((x) => x.hole === h);
-      if (!rec) return { hole: h, status: "unplayed", low: null, played: 0 };
-      const holder = Array.isArray(rec.holders) ? rec.holders[0] : undefined;
-      return {
-        hole: h,
-        status: rec.status,
-        low: rec.low_score,
-        who: holder ? lastName(holder.name) : undefined,
-        played: rec.played_count ?? 0,
-      };
-    });
-  })();
+  const strip: Strip[] = holes.map((h) => {
+    const rec = leaders.find((x) => x.hole === h);
+    if (!rec) return { hole: h, status: "unplayed", low: null, played: 0 };
+    const holder = Array.isArray(rec.holders) ? rec.holders[0] : undefined;
+    return {
+      hole: h,
+      status: rec.status,
+      low: rec.low_score,
+      who: holder ? lastName(holder.name) : undefined,
+      played: rec.played_count ?? 0,
+    };
+  });
 
   const liveSkins = strip.filter((s) => s.status === "clear").length;
 
