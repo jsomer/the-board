@@ -11,7 +11,8 @@ import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { WhereDoIStand } from "./WhereDoIStand";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
-import { listGroups } from "@/lib/api/groups";
+import { listGroups, approveGroup, type EventGroup } from "@/lib/api/groups";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { Player } from "@/data/board";
 
 const DEFAULT_PARS = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 3, 5, 4];
