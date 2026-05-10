@@ -1,44 +1,52 @@
 import { Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBoardData } from "@/lib/board/context";
+import type { HoleLeader } from "@/lib/api/types";
 
-const FALLBACK = [
-  { hole: 13, status: "won" as const, who: "Reyes", amount: 20 },
-  { hole: 14, status: "carry" as const, amount: 40 },
-  { hole: 15, status: "pending" as const, amount: 60 },
-  { hole: 16, status: "open" as const, amount: 20 },
-  { hole: 17, status: "open" as const, amount: 20 },
-  { hole: 18, status: "open" as const, amount: 20 },
+const FALLBACK: Strip[] = [
+  { hole: 13, status: "clear", low: 3, who: "Reyes", played: 4 },
+  { hole: 14, status: "tied", low: 4, played: 3 },
+  { hole: 15, status: "clear", low: 2, who: "Park", played: 2 },
+  { hole: 16, status: "unplayed", low: null, played: 0 },
+  { hole: 17, status: "unplayed", low: null, played: 0 },
+  { hole: 18, status: "unplayed", low: null, played: 0 },
 ];
 
-type Strip = { hole: number; status: "won" | "carry" | "pending" | "open"; amount: number; who?: string };
+type Status = "unplayed" | "clear" | "tied";
+type Strip = { hole: number; status: Status; low: number | null; who?: string; played: number };
+
+function lastName(name: string): string {
+  return name.trim().split(/\s+/).slice(-1)[0] ?? name;
+}
 
 export function SkinsStrip() {
-  const { skins, rawEvent, players, event } = useBoardData();
+  const { rawEvent, event } = useBoardData();
 
   const strip: Strip[] = (() => {
-    if (!skins || !rawEvent) return FALLBACK;
-    const safePlayers = Array.isArray(players) ? players : [];
-    const skinHoles = Array.isArray(skins.holes) ? skins.holes : [];
-    const participants = Array.isArray(skins.participants) ? skins.participants : [];
-    const playerName = (id: string | number) => safePlayers.find((p) => p.id === String(id))?.name.split(" ").slice(-1)[0] ?? String(id);
-    const perHoleBase = participants.length > 0 ? skins.pot / 18 : 5;
-    const liveHole = event.hole;
+    const leaders: HoleLeader[] = Array.isArray(rawEvent?.hole_leaders)
+      ? rawEvent!.hole_leaders
+      : [];
+    if (!rawEvent || leaders.length === 0) return FALLBACK;
 
+    const liveHole = event.hole;
     const start = Math.max(1, Math.min(13, liveHole - 2));
     const holes = Array.from({ length: 6 }, (_, i) => start + i);
+
     return holes.map((h) => {
-      const rec = skinHoles.find((x) => x.hole === h);
-      const carry = rec?.carryIn ?? 0;
-      const amount = Math.round((carry + 1) * perHoleBase);
-      if (rec?.winner != null) return { hole: h, status: "won", amount, who: playerName(rec.winner) };
-      if (h === liveHole) return { hole: h, status: "pending", amount };
-      if (carry > 0) return { hole: h, status: "carry", amount };
-      return { hole: h, status: "open", amount };
+      const rec = leaders.find((x) => x.hole === h);
+      if (!rec) return { hole: h, status: "unplayed", low: null, played: 0 };
+      const holder = Array.isArray(rec.holders) ? rec.holders[0] : undefined;
+      return {
+        hole: h,
+        status: rec.status,
+        low: rec.low_score,
+        who: holder ? lastName(holder.name) : undefined,
+        played: rec.played_count ?? 0,
+      };
     });
   })();
 
-  const liveSkinHole = strip.find((s) => s.status === "pending");
+  const liveSkins = strip.filter((s) => s.status === "clear").length;
 
   return (
     <section className="px-4">
@@ -49,8 +57,7 @@ export function SkinsStrip() {
             Skins
           </div>
           <span className="text-[11px] font-semibold text-muted-foreground">
-            Pot <span className="text-gold">${event.skinsPot || liveSkinHole?.amount || 0}</span>
-            {liveSkinHole ? ` on hole ${liveSkinHole.hole}` : ""}
+            <span className="text-gold">{liveSkins}</span> live · target = low score to beat
           </span>
         </div>
         <div className="grid grid-cols-6 gap-1.5">
@@ -59,25 +66,30 @@ export function SkinsStrip() {
               key={s.hole}
               className={cn(
                 "flex flex-col items-center gap-0.5 rounded-lg border px-1 py-1.5 text-center",
-                s.status === "won" && "border-money/40 bg-money/10",
-                s.status === "carry" && "border-bubble/40 bg-bubble/10",
-                s.status === "pending" && "border-gold/50 bg-gold/15 animate-pulse-glow",
-                s.status === "open" && "border-border bg-surface-2",
+                s.status === "clear" && "border-money/40 bg-money/10",
+                s.status === "tied" && "border-border bg-surface-2 opacity-70",
+                s.status === "unplayed" && "border-border bg-surface-2",
               )}
             >
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 H{s.hole}
               </span>
-              <span className={cn(
-                "font-tabular text-sm font-extrabold",
-                s.status === "pending" ? "text-gold" :
-                s.status === "won" ? "text-money" :
-                s.status === "carry" ? "text-bubble" : "text-foreground/70",
-              )}>
-                ${s.amount}
+              <span
+                className={cn(
+                  "font-tabular text-sm font-extrabold",
+                  s.status === "clear" && "text-money",
+                  s.status === "tied" && "text-foreground/60 line-through",
+                  s.status === "unplayed" && "text-foreground/40",
+                )}
+              >
+                {s.low != null ? s.low : "—"}
               </span>
-              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                {s.status === "won" ? s.who : s.status}
+              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate max-w-full">
+                {s.status === "clear"
+                  ? s.who ?? "live"
+                  : s.status === "tied"
+                    ? "dead"
+                    : "open"}
               </span>
             </div>
           ))}
