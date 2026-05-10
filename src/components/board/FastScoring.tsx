@@ -430,7 +430,7 @@ export function FastScoring() {
           </button>
           <button
             onClick={submitNext}
-            disabled={hole >= 18}
+            disabled={false}
             className={cn(
               "flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-extrabold uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-40",
               allEntered
