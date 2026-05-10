@@ -33,7 +33,10 @@ export function QuotaLeaderboardPage() {
   const event = boardEvent;
 
   const quotas = useMemo(() => quotasFromEvent(rawEvent), [rawEvent]);
-  const skinResults: HoleSkin[] = useMemo(() => skinRowsFromState(skins), [skins]);
+  const skinResults: HoleSkin[] = useMemo(() => {
+    const fromLeaders = skinRowsFromHoleLeaders(rawEvent);
+    return fromLeaders.length > 0 ? fromLeaders : skinRowsFromState(skins);
+  }, [rawEvent, skins]);
 
   const rows: Row[] = useMemo(() => {
     const skinsByPid = skinResults.reduce<Record<string, { count: number; value: number }>>((acc, s) => {
