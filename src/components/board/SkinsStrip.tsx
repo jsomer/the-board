@@ -20,13 +20,16 @@ function lastName(name: string): string {
 }
 
 export function SkinsStrip() {
-  const { rawEvent, event } = useBoardData();
+  const { rawEvent, event, isMock } = useBoardData();
 
   const strip: Strip[] = (() => {
     const leaders: HoleLeader[] = Array.isArray(rawEvent?.hole_leaders)
       ? rawEvent!.hole_leaders
       : [];
-    if (!rawEvent || leaders.length === 0) return FALLBACK;
+    // Only show seeded fallback when running on mock data (logged out demo).
+    // For a real event with no leaders yet, render an "open" strip so we never
+    // show bogus winners.
+    if (!rawEvent && isMock) return FALLBACK;
 
     const liveHole = event.hole;
     const start = Math.max(1, Math.min(13, liveHole - 2));
