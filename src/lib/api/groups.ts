@@ -5,12 +5,24 @@ export interface GroupMember {
   name: string;
 }
 
+export type GroupStatus = "scoring" | "needs_review" | "approved";
+
 export interface EventGroup {
   id: number;
   event_id: number;
   name: string;
   start_hole: number | null;
+  status: GroupStatus;
+  approved_at: string | null;
+  approved_by_player_id: number | null;
+  approved_by_name: string | null;
   members: GroupMember[];
+}
+
+export function approveGroup(eventId: number | string, groupId: number | string) {
+  return api<EventGroup>(`/events/${eventId}/groups/${groupId}/approve`, {
+    method: "POST",
+  });
 }
 
 export async function listGroups(eventId: number | string): Promise<EventGroup[]> {

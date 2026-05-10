@@ -11,7 +11,8 @@ import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { WhereDoIStand } from "./WhereDoIStand";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
-import { listGroups } from "@/lib/api/groups";
+import { listGroups, approveGroup, type EventGroup } from "@/lib/api/groups";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { Player } from "@/data/board";
 
 const DEFAULT_PARS = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 3, 5, 4];
@@ -75,6 +76,8 @@ export function FastScoring() {
   const [savedFlash, setSavedFlash] = useState(false);
   const [lastEntry, setLastEntry] = useState<{ pid: string; hole: number; prev?: number } | null>(null);
   const [roundOpen, setRoundOpen] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   const { locked: lockedHoles } = useHoleLocks();
   const isLocked = lockedHoles.includes(hole);
@@ -83,20 +86,23 @@ export function FastScoring() {
   // Compute the active group's players. Prefer the group containing the
   // authenticated player; admins fall back to the first group; otherwise
   // show all players (mock or no-groups mode).
-  const groupPlayers: Player[] = useMemo(() => {
+  const activeGroup: EventGroup | null = useMemo(() => {
     const groups = groupsQ.data ?? [];
-    if (groups.length === 0) return seedPlayers;
-    const byId = new Map(seedPlayers.map((p) => [String(p.id), p]));
+    if (groups.length === 0) return null;
     const myGroup = meId
       ? groups.find((g) => g.members.some((m) => String(m.player_id) === String(meId)))
       : null;
-    const target = myGroup ?? (isAdmin ? groups[0] : null);
-    if (!target) return seedPlayers;
-    const list = target.members
+    return myGroup ?? (isAdmin ? groups[0] : null);
+  }, [groupsQ.data, meId, isAdmin]);
+
+  const groupPlayers: Player[] = useMemo(() => {
+    if (!activeGroup) return seedPlayers;
+    const byId = new Map(seedPlayers.map((p) => [String(p.id), p]));
+    const list = activeGroup.members
       .map((m) => byId.get(String(m.player_id)))
       .filter((p): p is Player => Boolean(p));
     return list.length > 0 ? list : seedPlayers;
-  }, [groupsQ.data, seedPlayers, meId, isAdmin]);
+  }, [activeGroup, seedPlayers]);
 
   // Quick options anchored to par
   const options = useMemo(() => {
@@ -169,6 +175,24 @@ export function FastScoring() {
   const enteredCount = groupPlayers.filter((p) => scores[p.id]?.[hole] != null).length;
   const allEntered = enteredCount === groupPlayers.length && groupPlayers.length > 0;
   const openPlayer = roundOpen ? groupPlayers.find((p) => p.id === roundOpen) ?? null : null;
+  const groupStatus = activeGroup?.status ?? null;
+  const groupApproved = groupStatus === "approved";
+
+  const handleApprove = async () => {
+    if (!eventId || !activeGroup) return;
+    setApproving(true);
+    try {
+      await approveGroup(eventId, activeGroup.id);
+      toast.success("Scores approved");
+      setReviewOpen(false);
+      await groupsQ.refetch();
+      refresh();
+    } catch (e) {
+      toast.error("Failed to approve", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setApproving(false);
+    }
+  };
 
   return (
     <main className="mx-auto min-h-screen max-w-xl pb-28">
@@ -261,6 +285,42 @@ export function FastScoring() {
             {enteredCount}/{groupPlayers.length} entered
           </div>
         </div>
+
+        {groupStatus === "needs_review" && (
+          <div className="mb-3 flex flex-col gap-2 rounded-2xl border border-gold/40 bg-gold/10 p-3">
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gold">
+              <ListChecks className="h-3.5 w-3.5" /> Round complete · Needs review
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              All players in this group have posted 18 holes. Review the scorecard and approve to lock it in.
+            </p>
+            <button
+              type="button"
+              onClick={() => setReviewOpen(true)}
+              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] text-sm font-extrabold uppercase tracking-wider text-primary-foreground shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] active:scale-[0.98]"
+            >
+              <ListChecks className="h-4 w-4" /> Review &amp; Approve Scores
+            </button>
+          </div>
+        )}
+
+        {groupApproved && activeGroup && (
+          <div className="mb-3 flex items-center gap-2 rounded-2xl border border-money/40 bg-money/10 px-3 py-2 text-[11px] font-semibold text-money">
+            <Lock className="h-3.5 w-3.5" />
+            <div className="flex-1">
+              Scores approved
+              {activeGroup.approved_by_name ? ` by ${activeGroup.approved_by_name}` : ""}
+              {activeGroup.approved_at ? ` · ${formatApprovedAt(activeGroup.approved_at)}` : ""}
+            </div>
+            <button
+              type="button"
+              onClick={() => setReviewOpen(true)}
+              className="rounded-full bg-money/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+            >
+              View
+            </button>
+          </div>
+        )}
 
         <ul className={cn("flex flex-col gap-2", isLocked && "opacity-60")}>
           {groupPlayers.map((p) => {
@@ -378,6 +438,17 @@ export function FastScoring() {
           Tap a score for each player · Submit advances to the next hole
         </p>
       </section>
+
+      <ReviewDialog
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        group={activeGroup}
+        players={groupPlayers}
+        scores={scores}
+        pars={PARS}
+        onApprove={handleApprove}
+        approving={approving}
+      />
 
       <RoundDrawer
         open={openPlayer != null}
@@ -617,3 +688,152 @@ function SaveIndicator({
     </span>
   );
 }
+
+function formatApprovedAt(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function ReviewDialog({
+  open,
+  onOpenChange,
+  group,
+  players,
+  scores,
+  pars,
+  onApprove,
+  approving,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  group: EventGroup | null;
+  players: Player[];
+  scores: Scores;
+  pars: number[];
+  onApprove: () => void;
+  approving: boolean;
+}) {
+  const approved = group?.status === "approved";
+  const front = pars.slice(0, 9);
+  const back = pars.slice(9, 18);
+  const totalPar = pars.reduce((s, p) => s + p, 0);
+
+  const playerTotals = (pid: string) => {
+    const s = scores[pid] ?? {};
+    let outScore = 0, inScore = 0;
+    for (let h = 1; h <= 9; h++) outScore += s[h] ?? 0;
+    for (let h = 10; h <= 18; h++) inScore += s[h] ?? 0;
+    const total = outScore + inScore;
+    const played = Object.values(s).filter((v) => v != null && (v as number) > 0).length;
+    return { outScore, inScore, total, played };
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Review Scorecard{group ? ` · ${group.name}` : ""}</DialogTitle>
+          <DialogDescription>
+            {approved
+              ? `Approved${group?.approved_by_name ? ` by ${group.approved_by_name}` : ""}${group?.approved_at ? ` on ${formatApprovedAt(group.approved_at)}` : ""}.`
+              : "Confirm every score is correct. Approving locks the group's scorecard."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px]">
+            <thead>
+              <tr className="text-muted-foreground">
+                <th className="sticky left-0 bg-background px-2 py-1 text-left font-bold uppercase tracking-wider">Player</th>
+                {front.map((_, i) => (
+                  <th key={`f${i}`} className="px-1 py-1 text-center font-tabular">{i + 1}</th>
+                ))}
+                <th className="px-2 py-1 text-center font-bold uppercase tracking-wider">Out</th>
+                {back.map((_, i) => (
+                  <th key={`b${i}`} className="px-1 py-1 text-center font-tabular">{i + 10}</th>
+                ))}
+                <th className="px-2 py-1 text-center font-bold uppercase tracking-wider">In</th>
+                <th className="px-2 py-1 text-center font-bold uppercase tracking-wider">Tot</th>
+              </tr>
+              <tr className="text-muted-foreground/70">
+                <th className="sticky left-0 bg-background px-2 py-1 text-left font-semibold uppercase tracking-wider">Par</th>
+                {front.map((p, i) => (
+                  <th key={`fp${i}`} className="px-1 py-1 text-center font-tabular font-normal">{p}</th>
+                ))}
+                <th className="px-2 py-1 text-center font-tabular">{front.reduce((a, b) => a + b, 0)}</th>
+                {back.map((p, i) => (
+                  <th key={`bp${i}`} className="px-1 py-1 text-center font-tabular font-normal">{p}</th>
+                ))}
+                <th className="px-2 py-1 text-center font-tabular">{back.reduce((a, b) => a + b, 0)}</th>
+                <th className="px-2 py-1 text-center font-tabular">{totalPar}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((p) => {
+                const s = scores[p.id] ?? {};
+                const t = playerTotals(p.id);
+                return (
+                  <tr key={p.id} className="border-t border-border">
+                    <td className="sticky left-0 bg-background px-2 py-1.5 font-bold">{p.name}</td>
+                    {front.map((par, i) => {
+                      const h = i + 1;
+                      const v = s[h];
+                      return (
+                        <td key={`fs${h}`} className={cn("px-1 py-1.5 text-center font-tabular", v != null && v - par <= -1 && "text-money font-bold", v != null && v - par >= 1 && "text-down")}>
+                          {v ?? "—"}
+                        </td>
+                      );
+                    })}
+                    <td className="px-2 py-1.5 text-center font-tabular font-bold">{t.outScore || "—"}</td>
+                    {back.map((par, i) => {
+                      const h = i + 10;
+                      const v = s[h];
+                      return (
+                        <td key={`bs${h}`} className={cn("px-1 py-1.5 text-center font-tabular", v != null && v - par <= -1 && "text-money font-bold", v != null && v - par >= 1 && "text-down")}>
+                          {v ?? "—"}
+                        </td>
+                      );
+                    })}
+                    <td className="px-2 py-1.5 text-center font-tabular font-bold">{t.inScore || "—"}</td>
+                    <td className="px-2 py-1.5 text-center font-tabular font-extrabold">{t.total || "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <DialogFooter>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="h-10 rounded-xl border border-border bg-surface px-4 text-sm font-bold uppercase tracking-wider"
+          >
+            Close
+          </button>
+          {!approved && (
+            <button
+              type="button"
+              onClick={onApprove}
+              disabled={approving}
+              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] px-4 text-sm font-extrabold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+            >
+              {approving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              {approving ? "Approving…" : "Approve Scores"}
+            </button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
