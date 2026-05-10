@@ -1,6 +1,16 @@
 import type { EventRecord, HoleLeader, SkinsState } from "@/lib/api/types";
 
-export type HoleSkin = { hole: number; winner: string | null; value: number; score: number | null };
+export type HoleSkin = {
+  hole: number;
+  winner: string | null;
+  winnerName?: string | null;
+  value: number;
+  score: number | null;
+  par?: number | null;
+  playedCount?: number;
+  totalPlayers?: number;
+  status?: "unplayed" | "clear" | "tied";
+};
 
 /** Quotas keyed by string player id, derived from EventRecord.players[].quota */
 export function quotasFromEvent(evt: EventRecord | null): Record<string, number> {
@@ -38,13 +48,23 @@ export function skinRowsFromHoleLeaders(
   const leaders: HoleLeader[] = Array.isArray(evt.hole_leaders) ? evt.hole_leaders : [];
   if (leaders.length === 0) return [];
   const perHole = 5; // server doesn't carry per-hole pot value yet
+  const totalPlayers = Array.isArray(evt.players) ? evt.players.length : 0;
+  const pars = Array.isArray(evt.hole_pars) ? evt.hole_pars : [];
   return leaders
     .slice()
     .sort((a, b) => a.hole - b.hole)
-    .map((h) => ({
-      hole: h.hole,
-      winner: h.status === "clear" && h.holders?.[0] ? String(h.holders[0].player_id) : null,
-      value: perHole,
-      score: h.low_score,
-    }));
+    .map((h) => {
+      const holder = h.status === "clear" ? h.holders?.[0] : undefined;
+      return {
+        hole: h.hole,
+        winner: holder ? String(holder.player_id) : null,
+        winnerName: holder?.name ?? null,
+        value: perHole,
+        score: h.low_score,
+        par: pars[h.hole - 1] ?? null,
+        playedCount: h.played_count ?? 0,
+        totalPlayers,
+        status: h.status,
+      };
+    });
 }
