@@ -35,9 +35,8 @@ const stablefordPointsSchema = z
     bogey: z.number().finite().optional(),
     double_or_worse: z.number().finite().optional(),
   })
-  .catchall(z.number().finite().nullable())
-  .strict()
-  .partial();
+  .partial()
+  .passthrough();
 
 const payoutRulesSchema = z
   .object({
@@ -58,8 +57,8 @@ const pointsRulesSchema = z
     topThreePoints: z.number().finite().optional(),
     participationPoints: z.number().finite().optional(),
   })
-  .catchall(z.number().finite())
-  .partial();
+  .partial()
+  .passthrough();
 
 export const createGameSetupSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
