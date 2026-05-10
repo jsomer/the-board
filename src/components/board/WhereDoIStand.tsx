@@ -5,25 +5,7 @@ import { useMe } from "@/hooks/useMe";
 import { skinRowsFromHoleLeaders, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 import { cn } from "@/lib/utils";
 
-// Mock fallback used only when the API has not produced a SkinsState yet
-const FALLBACK_SKINS: HoleSkin[] = [
-  { hole: 1,  winner: "p1", value: 5 },
-  { hole: 2,  winner: null, value: 5 },
-  { hole: 3,  winner: "p3", value: 10 },
-  { hole: 4,  winner: "p2", value: 5 },
-  { hole: 5,  winner: null, value: 5 },
-  { hole: 6,  winner: "p1", value: 10 },
-  { hole: 7,  winner: "p2", value: 5 },
-  { hole: 8,  winner: null, value: 5 },
-  { hole: 9,  winner: "p1", value: 10 },
-  { hole: 10, winner: "p3", value: 5 },
-  { hole: 11, winner: null, value: 5 },
-  { hole: 12, winner: "p2", value: 10 },
-  { hole: 13, winner: "p1", value: 5 },
-  { hole: 14, winner: null, value: 5 },
-  { hole: 15, winner: "p3", value: 10 },
-  { hole: 16, winner: "p1", value: 5 },
-];
+// No mock fallback — skins must come from the live event's `hole_leaders`.
 
 const FALLBACK_QUOTAS: Record<string, number> = {
   p1: 36, p2: 34, p3: 32, p4: 30, p5: 30, p6: 28, p7: 26, p8: 24,
