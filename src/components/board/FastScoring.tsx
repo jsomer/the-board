@@ -76,6 +76,8 @@ export function FastScoring() {
   const [savedFlash, setSavedFlash] = useState(false);
   const [lastEntry, setLastEntry] = useState<{ pid: string; hole: number; prev?: number } | null>(null);
   const [roundOpen, setRoundOpen] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   const { locked: lockedHoles } = useHoleLocks();
   const isLocked = lockedHoles.includes(hole);
