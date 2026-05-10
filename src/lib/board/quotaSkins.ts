@@ -1,6 +1,6 @@
 import type { EventRecord, HoleLeader, SkinsState } from "@/lib/api/types";
 
-export type HoleSkin = { hole: number; winner: string | null; value: number };
+export type HoleSkin = { hole: number; winner: string | null; value: number; score: number | null };
 
 /** Quotas keyed by string player id, derived from EventRecord.players[].quota */
 export function quotasFromEvent(evt: EventRecord | null): Record<string, number> {
@@ -20,6 +20,7 @@ export function skinRowsFromState(skins: SkinsState | null): HoleSkin[] {
     hole: h.hole,
     winner: h.winner != null ? String(h.winner) : null,
     value: Math.round((h.carryIn + 1) * perHoleBase),
+    score: null,
   }));
 }
 
@@ -44,5 +45,6 @@ export function skinRowsFromHoleLeaders(
       hole: h.hole,
       winner: h.status === "clear" && h.holders?.[0] ? String(h.holders[0].player_id) : null,
       value: perHole,
+      score: h.low_score,
     }));
 }
