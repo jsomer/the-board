@@ -48,6 +48,8 @@ const payoutRulesSchema = z
     skinsPct: z.number().min(0).max(100).optional(),
     ctpsPct: z.number().min(0).max(100).optional(),
     otherPct: z.number().min(0).max(100).optional(),
+    roundingIncrement: z.number().min(0).optional(),
+    minimumPayout: z.number().min(0).optional(),
   })
   .strict();
 
