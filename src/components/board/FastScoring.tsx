@@ -439,7 +439,17 @@ export function FastScoring() {
         </p>
       </section>
 
-      <RoundDrawer
+      <ReviewDialog
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        group={activeGroup}
+        players={groupPlayers}
+        scores={scores}
+        pars={PARS}
+        onApprove={handleApprove}
+        approving={approving}
+      />
+
         open={openPlayer != null}
         onOpenChange={(o) => !o && setRoundOpen(null)}
         playerName={openPlayer?.name ?? ""}
