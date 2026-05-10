@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Settings2, Play, Pause, RefreshCcw, DollarSign, Flag, Users,
-  Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio, History,
+  Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio, History, X, Loader2, Search,
 } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
+import { listPlayers } from "@/lib/api/admin";
+import type { PlayerRecord } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -95,13 +97,39 @@ export function AdminPage() {
     flash();
   };
 
-  const addPlayer = () => {
-    const n = players.length + 1;
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+
+  const allPlayersQ = useQuery({
+    queryKey: ["players", "all"],
+    queryFn: listPlayers,
+    enabled: isAdmin && showPicker,
+    staleTime: 60_000,
+  });
+
+  const existingIds = useMemo(() => new Set(players.map((p) => String(p.id))), [players]);
+  const availablePlayers = useMemo(() => {
+    const list = allPlayersQ.data ?? [];
+    const q = pickerSearch.trim().toLowerCase();
+    return list
+      .filter((p) => !existingIds.has(String(p.id)))
+      .filter((p) => {
+        if (!q) return true;
+        const full = `${p.first_name ?? ""} ${p.last_name ?? ""}`.toLowerCase();
+        return full.includes(q) || (p.email ?? "").toLowerCase().includes(q);
+      });
+  }, [allPlayersQ.data, existingIds, pickerSearch]);
+
+  const addPlayerFromRecord = (rec: PlayerRecord) => {
+    const first = rec.first_name?.trim() ?? "";
+    const last = rec.last_name?.trim() ?? "";
+    const fullName = `${first} ${last}`.trim() || (rec.email ?? `Player ${rec.id}`);
+    const initials = ((first[0] ?? "") + (last[0] ?? "")).toUpperCase() || fullName.slice(0, 2).toUpperCase();
     const fresh: Player = {
-      id: `p${Date.now()}`,
-      name: `New Player ${n}`,
-      initials: `P${n}`,
-      team: n % 2 === 0 ? "Hawks" : "Eagles",
+      id: String(rec.id),
+      name: fullName,
+      initials,
+      team: players.length % 2 === 0 ? "Eagles" : "Hawks",
       thru: 0,
       toPar: 0,
       trend: "flat",
@@ -110,6 +138,8 @@ export function AdminPage() {
       skins: 0,
     };
     setPlayers((arr) => [...arr, fresh]);
+    setShowPicker(false);
+    setPickerSearch("");
     flash();
   };
 
@@ -240,11 +270,56 @@ export function AdminPage() {
           <Panel
             title="Players"
             action={
-              <button onClick={addPlayer} className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-primary-foreground">
-                <Plus className="h-3 w-3" /> Add
+              <button
+                onClick={() => { setShowPicker((v) => !v); setPickerSearch(""); }}
+                className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-primary-foreground"
+              >
+                {showPicker ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />} {showPicker ? "Close" : "Add"}
               </button>
             }
           >
+            {showPicker && (
+              <div className="mb-3 rounded-xl border border-border bg-surface p-2.5">
+                <div className="mb-2 flex items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1.5">
+                  <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                  <input
+                    autoFocus
+                    value={pickerSearch}
+                    onChange={(e) => setPickerSearch(e.target.value)}
+                    placeholder="Search players…"
+                    className="flex-1 bg-transparent text-sm outline-none"
+                  />
+                </div>
+                {allPlayersQ.isLoading ? (
+                  <div className="flex items-center gap-2 px-2 py-3 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading players…
+                  </div>
+                ) : allPlayersQ.error ? (
+                  <p className="px-2 py-2 text-xs text-destructive">Failed to load players</p>
+                ) : availablePlayers.length === 0 ? (
+                  <p className="px-2 py-2 text-xs text-muted-foreground">
+                    {pickerSearch ? "No matching players" : "All system players are already in this event"}
+                  </p>
+                ) : (
+                  <ul className="max-h-56 space-y-1 overflow-y-auto">
+                    {availablePlayers.map((rec) => {
+                      const fullName = `${rec.first_name ?? ""} ${rec.last_name ?? ""}`.trim() || (rec.email ?? `Player ${rec.id}`);
+                      return (
+                        <li key={rec.id}>
+                          <button
+                            onClick={() => addPlayerFromRecord(rec)}
+                            className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm font-semibold hover:bg-surface-2"
+                          >
+                            <span className="truncate">{fullName}</span>
+                            <Plus className="h-3.5 w-3.5 text-primary" />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
             <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               <span><span className="text-primary">Eagles</span> {eaglesCount}</span>
               <span><span className="text-bubble">Hawks</span> {hawksCount}</span>
@@ -274,6 +349,7 @@ export function AdminPage() {
             </ul>
           </Panel>
         )}
+
 
         {tab === "groups" && (
           eventId != null ? (
