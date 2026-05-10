@@ -201,36 +201,56 @@ export function QuotaLeaderboardPage() {
         <div className="mb-2 flex items-center gap-2">
           <Flame className="h-4 w-4 text-gold" />
           <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            Skin winners
+            Skins
           </h2>
-          {carries.length > 0 && (
-            <span className="ml-auto rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold">
-              {carries.length} carrying
-            </span>
-          )}
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-2 shadow-card">
           {skinWinners.length === 0 ? (
             <div className="px-3 py-4 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              No skins won yet
+              No skins yet
             </div>
           ) : (
             <ul className="divide-y divide-border">
               {skinWinners
                 .slice()
                 .sort((a, b) => a.hole - b.hole)
-                .map((s) => (
-                  <li key={s.hole} className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="font-tabular w-10 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      H{s.hole}
-                    </span>
-                    <span className="flex-1 truncate text-sm font-bold">{s.player.name}</span>
-                    <span className="font-tabular text-sm font-extrabold text-gold">
-                      {s.score ?? "—"}
-                    </span>
-                  </li>
-                ))}
+                .map((s) => {
+                  const total = s.totalPlayers ?? 0;
+                  const played = s.playedCount ?? 0;
+                  const left = Math.max(0, total - played);
+                  const locked = total > 0 && left === 0;
+                  const scoreLabel = scoreToParLabel(s.score, s.par);
+                  return (
+                    <li key={s.hole} className="flex items-center gap-2 px-2 py-2">
+                      <span className="font-tabular w-10 shrink-0 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                        H{s.hole}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 truncate text-sm font-bold">
+                          <span className="truncate">{s.player.name}</span>
+                          {scoreLabel && (
+                            <span className="font-tabular rounded-md bg-gold/15 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-gold">
+                              {scoreLabel}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                          {locked ? (
+                            <span className="text-money">Skin locked in</span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {left} player{left === 1 ? "" : "s"} left to post
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="font-tabular text-sm font-extrabold text-foreground">
+                        {s.score ?? "—"}
+                      </span>
+                    </li>
+                  );
+                })}
             </ul>
           )}
         </div>
