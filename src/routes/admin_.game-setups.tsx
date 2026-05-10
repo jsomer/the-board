@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/board/entryGuard";
 import { GameSetupsPage } from "@/components/board/GameSetupsPage";
 
-export const Route = createFileRoute("/admin/game-setups")({
+export const Route = createFileRoute("/admin_/game-setups")({
   beforeLoad: () => requireAuth(),
   head: () => ({
     meta: [
