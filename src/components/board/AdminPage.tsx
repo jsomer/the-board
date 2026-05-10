@@ -346,6 +346,7 @@ export function AdminPage() {
                     </button>
                   </div>
                   <div className="flex items-center gap-0.5">
+                    <IconBtn onClick={() => setEditingPlayerId(p.id)}><Pencil className="h-4 w-4" /></IconBtn>
                     <IconBtn onClick={() => movePlayer(p.id, -1)} disabled={i === 0}><ChevronUp className="h-4 w-4" /></IconBtn>
                     <IconBtn onClick={() => movePlayer(p.id, 1)} disabled={i === players.length - 1}><ChevronDown className="h-4 w-4" /></IconBtn>
                     <IconBtn onClick={() => removePlayer(p.id)} danger><Trash2 className="h-4 w-4" /></IconBtn>
