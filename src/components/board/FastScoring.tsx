@@ -84,20 +84,23 @@ export function FastScoring() {
   // Compute the active group's players. Prefer the group containing the
   // authenticated player; admins fall back to the first group; otherwise
   // show all players (mock or no-groups mode).
-  const groupPlayers: Player[] = useMemo(() => {
+  const activeGroup: EventGroup | null = useMemo(() => {
     const groups = groupsQ.data ?? [];
-    if (groups.length === 0) return seedPlayers;
-    const byId = new Map(seedPlayers.map((p) => [String(p.id), p]));
+    if (groups.length === 0) return null;
     const myGroup = meId
       ? groups.find((g) => g.members.some((m) => String(m.player_id) === String(meId)))
       : null;
-    const target = myGroup ?? (isAdmin ? groups[0] : null);
-    if (!target) return seedPlayers;
-    const list = target.members
+    return myGroup ?? (isAdmin ? groups[0] : null);
+  }, [groupsQ.data, meId, isAdmin]);
+
+  const groupPlayers: Player[] = useMemo(() => {
+    if (!activeGroup) return seedPlayers;
+    const byId = new Map(seedPlayers.map((p) => [String(p.id), p]));
+    const list = activeGroup.members
       .map((m) => byId.get(String(m.player_id)))
       .filter((p): p is Player => Boolean(p));
     return list.length > 0 ? list : seedPlayers;
-  }, [groupsQ.data, seedPlayers, meId, isAdmin]);
+  }, [activeGroup, seedPlayers]);
 
   // Quick options anchored to par
   const options = useMemo(() => {
