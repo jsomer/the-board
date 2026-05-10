@@ -89,6 +89,28 @@ export function approveGroup(eventId: number | string, groupId: number | string)
   });
 }
 
+export interface FinalizeError extends Error {
+  status?: number;
+  incomplete?: Array<{ player_id: number; name: string }>;
+}
+
+export async function finalizeEvent(eventId: number | string): Promise<EventRecord> {
+  try {
+    const raw = await api<Record<string, unknown>>(`/events/${eventId}/finalize`, {
+      method: "POST",
+    });
+    return unwrapEvent(raw);
+  } catch (e) {
+    const err = e as FinalizeError & { body?: unknown };
+    // Try to surface incomplete-players list from the API error body if present
+    const body = (err as { body?: unknown }).body as
+      | { incomplete?: Array<{ player_id: number; name: string }> }
+      | undefined;
+    if (body?.incomplete) err.incomplete = body.incomplete;
+    throw err;
+  }
+}
+
 export async function listGroups(eventId: number | string): Promise<EventGroup[]> {
   const raw = await api<unknown>(`/events/${eventId}/groups`);
   return (Array.isArray(raw) ? raw : []) as EventGroup[];
