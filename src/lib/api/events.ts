@@ -89,6 +89,22 @@ export function approveGroup(eventId: number | string, groupId: number | string)
   });
 }
 
+export interface UpdateEventPayoutsBody {
+  payoutBreakdown: import("./types").PayoutBreakdownAmounts;
+  payoutRules: import("./types").PayoutRulesJson;
+}
+
+export async function updateEventPayouts(
+  eventId: number | string,
+  body: UpdateEventPayoutsBody,
+): Promise<EventRecord> {
+  const raw = await api<Record<string, unknown>>(`/events/${eventId}`, {
+    method: "PUT",
+    body,
+  });
+  return unwrapEvent(raw);
+}
+
 export interface FinalizeError extends Error {
   status?: number;
   incomplete?: Array<{ player_id: number; name: string }>;

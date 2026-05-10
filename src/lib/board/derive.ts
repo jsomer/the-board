@@ -10,6 +10,7 @@ import type {
 } from "@/lib/api/types";
 import type { Player, Team, Trend } from "@/data/board";
 import { teamForPlayer } from "./teams";
+import { paidPlacesCount, normalizePayouts } from "./payouts";
 
 export function initials(name: string): string {
   return name
@@ -71,15 +72,11 @@ export function projectedPayouts(
   ranked: EventPlayer[],
 ): Map<string, number> {
   const out = new Map<string, number>();
-  const breakdown = Array.isArray(event.payout_breakdown_json) ? event.payout_breakdown_json : [];
-  if (breakdown.length === 0) {
-    return out;
-  }
+  const np = normalizePayouts(event);
+  if (np.placeAmounts.length === 0) return out;
   for (let i = 0; i < ranked.length; i++) {
-    const slot = breakdown.find((b) => b.rank === i + 1);
-    if (slot) {
-      out.set(String(ranked[i].player_id), Math.round(event.total_pot * slot.pct));
-    }
+    const amt = np.placeAmounts[i];
+    if (amt && amt > 0) out.set(String(ranked[i].player_id), amt);
   }
   return out;
 }
@@ -117,7 +114,7 @@ export function derivePlayers(
   );
 
   const payouts = projectedPayouts(event, ranked);
-  const cashLine = event.payout_breakdown_json?.length ?? 0;
+  const cashLine = paidPlacesCount(event.payout_breakdown_json);
 
   const positions = new Map<string, number>();
   const players: Player[] = ranked.map((p, idx) => {

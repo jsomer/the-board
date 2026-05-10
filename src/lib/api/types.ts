@@ -3,6 +3,32 @@
 export type ScoringType = "stableford" | "gross_stroke" | "net_stroke";
 export type EventStatus = "draft" | "final";
 
+// Dollar-amount breakdown (newer shape). Either this object form or a legacy
+// per-rank percentage array may come back from the API.
+export interface PayoutBreakdownAmounts {
+  firstPlaceAmt?: number;
+  secondPlaceAmt?: number;
+  thirdPlaceAmt?: number;
+  fourthPlaceAmt?: number;
+  placeAmounts?: number[]; // dynamic / ordered list of all paid places
+  skinsAmt?: number;
+  ctpsAmt?: number;
+  otherAmt?: number;
+}
+export type PayoutBreakdownLegacy = { rank: number; pct: number }[];
+export type PayoutBreakdownJson = PayoutBreakdownAmounts | PayoutBreakdownLegacy;
+
+export interface PayoutRulesJson {
+  firstPlacePct?: number;
+  secondPlacePct?: number;
+  thirdPlacePct?: number;
+  fourthPlacePct?: number;
+  placePcts?: number[];
+  skinsPct?: number;
+  ctpsPct?: number;
+  otherPct?: number;
+}
+
 export interface EventPlayer {
   player_id: string | number;
   name: string;
@@ -47,7 +73,8 @@ export interface EventRecord {
   status: EventStatus;
   total_pot: number;
   hole_pars: number[]; // length 18
-  payout_breakdown_json?: { rank: number; pct: number }[] | null;
+  payout_breakdown_json?: PayoutBreakdownJson | null;
+  payout_rules_json?: PayoutRulesJson | null;
   players: EventPlayer[];
   teams_json?: Record<string, string> | null;
   locked_holes?: number[];
