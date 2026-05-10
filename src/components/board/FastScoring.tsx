@@ -132,6 +132,10 @@ export function FastScoring() {
   };
 
   const submitNext = () => {
+    // Pull fresh hole_leaders / side-bets so the Skins strip reflects the
+    // scores just entered. The queued POSTs flush within the debounce window
+    // (~500ms); kick a refetch shortly after so the board updates immediately.
+    window.setTimeout(() => { void refresh(); }, 700);
     setHole((h) => Math.min(18, h + 1));
   };
 
