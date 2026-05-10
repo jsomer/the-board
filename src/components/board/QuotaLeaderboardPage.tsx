@@ -226,52 +226,13 @@ export function QuotaLeaderboardPage() {
                       H{s.hole}
                     </span>
                     <span className="flex-1 truncate text-sm font-bold">{s.player.name}</span>
+                    <span className="font-tabular text-sm font-extrabold text-gold">
+                      {s.score ?? "—"}
+                    </span>
                   </li>
                 ))}
             </ul>
           )}
-        </div>
-
-        {/* Skins totals per player */}
-        <div className="mt-3 rounded-2xl border border-border bg-card shadow-card">
-          <div className="flex items-center justify-between border-b border-border px-3 py-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">By player</span>
-            <span className="font-tabular text-[11px] font-bold text-gold">
-              {skinWinners.length} skins won
-            </span>
-          </div>
-          <ul className="divide-y divide-border">
-            {Object.entries(
-              skinWinners.reduce<Record<string, { count: number; holes: number[] }>>((acc, s) => {
-                acc[s.winner!] = acc[s.winner!] ?? { count: 0, holes: [] };
-                acc[s.winner!].count += 1;
-                acc[s.winner!].holes.push(s.hole);
-                return acc;
-              }, {}),
-            )
-              .map(([pid, data]) => ({ player: seedPlayers.find((p) => p.id === pid)!, ...data }))
-              .sort((a, b) => b.count - a.count)
-              .map((row) => (
-                <li key={row.player.id} className="flex items-center gap-2.5 px-3 py-2">
-                  <span className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-extrabold",
-                    row.player.team === "Eagles" ? "bg-primary/15 text-primary" : "bg-bubble/15 text-bubble",
-                  )}>
-                    {row.player.initials}
-                  </span>
-                  <div className="flex-1">
-                    <div className="text-sm font-bold">{row.player.name}</div>
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Holes {row.holes.join(", ")}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Flame className="h-4 w-4 text-gold" />
-                    <span className="font-tabular text-base font-extrabold text-gold">{row.count}</span>
-                  </div>
-                </li>
-              ))}
-          </ul>
         </div>
       </section>
 
