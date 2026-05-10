@@ -10,6 +10,7 @@ import type {
 } from "@/lib/api/types";
 import type { Player, Team, Trend } from "@/data/board";
 import { teamForPlayer } from "./teams";
+import { paidPlacesCount } from "./payouts";
 
 export function initials(name: string): string {
   return name
@@ -117,7 +118,7 @@ export function derivePlayers(
   );
 
   const payouts = projectedPayouts(event, ranked);
-  const cashLine = event.payout_breakdown_json?.length ?? 0;
+  const cashLine = paidPlacesCount(event.payout_breakdown_json);
 
   const positions = new Map<string, number>();
   const players: Player[] = ranked.map((p, idx) => {
