@@ -12,6 +12,14 @@ export interface EventPlayer {
   holeScores: number[]; // length 18; 0 = unscored
 }
 
+export interface HoleLeader {
+  hole: number;                                         // 1–18
+  status: "unplayed" | "clear" | "tied";
+  low_score: number | null;                             // target score to beat; null if unplayed
+  holders: Array<{ player_id: number; name: string }>; // 1 = sole leader, 2+ = tied
+  played_count: number;                                 // players who have scored this hole
+}
+
 export interface EventRecord {
   id: number;
   event_code: string;        // auto-generated 6-char alphanumeric, primary display identifier
@@ -26,6 +34,7 @@ export interface EventRecord {
   players: EventPlayer[];
   teams_json?: Record<string, string> | null;
   locked_holes?: number[];
+  hole_leaders: HoleLeader[]; // live low-score holder per hole; length 18
 }
 
 export interface MeResponse {
