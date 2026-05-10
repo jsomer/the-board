@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Flame, TrendingUp, TrendingDown, Minus, Flag, Trophy } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
-import { quotasFromEvent, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
+import { quotasFromEvent, skinRowsFromHoleLeaders, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -33,7 +33,10 @@ export function QuotaLeaderboardPage() {
   const event = boardEvent;
 
   const quotas = useMemo(() => quotasFromEvent(rawEvent), [rawEvent]);
-  const skinResults: HoleSkin[] = useMemo(() => skinRowsFromState(skins), [skins]);
+  const skinResults: HoleSkin[] = useMemo(() => {
+    const fromLeaders = skinRowsFromHoleLeaders(rawEvent);
+    return fromLeaders.length > 0 ? fromLeaders : skinRowsFromState(skins);
+  }, [rawEvent, skins]);
 
   const rows: Row[] = useMemo(() => {
     const skinsByPid = skinResults.reduce<Record<string, { count: number; value: number }>>((acc, s) => {

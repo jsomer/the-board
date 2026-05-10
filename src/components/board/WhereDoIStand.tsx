@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Flame, TrendingUp, TrendingDown, Zap, Trophy, AlertTriangle, ChevronDown } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import { useMe } from "@/hooks/useMe";
-import { skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
+import { skinRowsFromHoleLeaders, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 import { cn } from "@/lib/utils";
 
 // Mock fallback used only when the API has not produced a SkinsState yet
@@ -50,11 +50,14 @@ export function WhereDoIStand({
   const ME_ID = authMeId ?? livePlayers[0]?.id ?? "p1";
   const me = livePlayers.find((p) => p.id === ME_ID) ?? livePlayers[0];
 
-  // Build per-hole skin records: from real SkinsState if present, else fallback
+  // Build per-hole skin records: prefer live `hole_leaders`, fall back to
+  // legacy SkinsState side-bet, then mock data only as a last resort.
   const skinResults: HoleSkin[] = useMemo(() => {
+    const fromLeaders = skinRowsFromHoleLeaders(rawEvent);
+    if (fromLeaders.length > 0) return fromLeaders;
     const fromApi = skinRowsFromState(skinsState);
     return fromApi.length > 0 ? fromApi : FALLBACK_SKINS;
-  }, [skinsState]);
+  }, [rawEvent, skinsState]);
 
   // ── Live skin lead on the current hole ─────────────────────
   const liveLead = useMemo(() => {
