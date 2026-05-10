@@ -1,6 +1,16 @@
 import type { EventRecord, HoleLeader, SkinsState } from "@/lib/api/types";
 
-export type HoleSkin = { hole: number; winner: string | null; value: number; score: number | null };
+export type HoleSkin = {
+  hole: number;
+  winner: string | null;
+  winnerName?: string | null;
+  value: number;
+  score: number | null;
+  par?: number | null;
+  playedCount?: number;
+  totalPlayers?: number;
+  status?: "unplayed" | "clear" | "tied";
+};
 
 /** Quotas keyed by string player id, derived from EventRecord.players[].quota */
 export function quotasFromEvent(evt: EventRecord | null): Record<string, number> {
