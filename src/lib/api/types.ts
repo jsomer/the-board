@@ -86,11 +86,56 @@ export interface MeResponse {
   isAdmin?: boolean;
 }
 
+export type GameSetupScoringType = "gross_stroke" | "net_stroke" | "stableford";
+export type GameSetupHandicapSource = "usga" | "game_points";
+export type GameSetupScoringScope = "overall" | "front_back" | "front_back_overall";
+
+export interface StablefordPointsJson {
+  eagle?: number;
+  birdie?: number;
+  par?: number;
+  bogey?: number;
+  double_or_worse?: number;
+  [key: string]: number | undefined;
+}
+
+export interface GameSetupPayoutRulesJson {
+  firstPlacePct?: number;
+  secondPlacePct?: number;
+  thirdPlacePct?: number;
+  fourthPlacePct?: number;
+  placePcts?: number[];
+  skinsPct?: number;
+  ctpsPct?: number;
+  otherPct?: number;
+}
+
+export interface PointsRulesJson {
+  winPoints?: number;
+  topThreePoints?: number;
+  participationPoints?: number;
+  [key: string]: number | undefined;
+}
+
 export interface GameSetup {
   id: number;
+  user_id?: number;
   name: string;
-  scoring_type: "gross_stroke" | "net_stroke" | "stableford" | string;
   entry_fee?: number | null;
+  scoring_type: GameSetupScoringType | string;
+  handicap_source?: GameSetupHandicapSource | string;
+  scoring_scope?: GameSetupScoringScope | string;
+  stableford_points_json?: StablefordPointsJson | null;
+  payout_rules_json?: GameSetupPayoutRulesJson | null;
+  points_rules_json?: PointsRulesJson | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface UserSettings {
+  user_id: number;
+  defaultGameSetupId: number | null;
+  updated_at?: string;
 }
 
 export interface Course {
