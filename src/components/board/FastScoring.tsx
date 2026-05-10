@@ -141,7 +141,16 @@ export function FastScoring() {
     // Pull fresh hole_leaders / side-bets so the Skins strip reflects the
     // scores just entered. The queued POSTs flush within the debounce window
     // (~500ms); kick a refetch shortly after so the board updates immediately.
-    window.setTimeout(() => { void refresh(); }, 700);
+    window.setTimeout(() => {
+      void refresh();
+      void groupsQ.refetch();
+    }, 700);
+    if (hole >= 18) {
+      // Finish round: open the review dialog so the group can approve.
+      // Give the queue a moment to flush so server status flips to needs_review.
+      window.setTimeout(() => setReviewOpen(true), 800);
+      return;
+    }
     setHole((h) => Math.min(18, h + 1));
   };
 
