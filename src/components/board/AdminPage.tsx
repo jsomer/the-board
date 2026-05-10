@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, Settings2, Play, Pause, RefreshCcw, DollarSign, Flag, Users,
-  Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio, History, X, Loader2, Search,
+  Megaphone, Plus, Minus, Lock, Unlock, Trash2, ChevronUp, ChevronDown, Save, Radio, History, X, Loader2, Search, Pencil,
 } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import type { Player } from "@/data/board";
-import { listPlayers } from "@/lib/api/admin";
+import { listPlayers, updatePlayer, type UpdatePlayerPayload } from "@/lib/api/admin";
 import type { PlayerRecord } from "@/lib/api/types";
+import { ApiError } from "@/lib/api/client";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -99,11 +102,14 @@ export function AdminPage() {
 
   const [showPicker, setShowPicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
 
   const allPlayersQ = useQuery({
     queryKey: ["players", "all"],
     queryFn: listPlayers,
-    enabled: isAdmin && showPicker,
+    enabled: isAdmin && (showPicker || editingPlayerId !== null),
     staleTime: 60_000,
   });
 
@@ -340,6 +346,7 @@ export function AdminPage() {
                     </button>
                   </div>
                   <div className="flex items-center gap-0.5">
+                    <IconBtn onClick={() => setEditingPlayerId(p.id)}><Pencil className="h-4 w-4" /></IconBtn>
                     <IconBtn onClick={() => movePlayer(p.id, -1)} disabled={i === 0}><ChevronUp className="h-4 w-4" /></IconBtn>
                     <IconBtn onClick={() => movePlayer(p.id, 1)} disabled={i === players.length - 1}><ChevronDown className="h-4 w-4" /></IconBtn>
                     <IconBtn onClick={() => removePlayer(p.id)} danger><Trash2 className="h-4 w-4" /></IconBtn>
@@ -464,8 +471,189 @@ export function AdminPage() {
         )}
       </section>
 
+      <EditPlayerDialog
+        playerId={editingPlayerId}
+        record={allPlayersQ.data?.find((r) => String(r.id) === editingPlayerId) ?? null}
+        loading={allPlayersQ.isLoading}
+        onClose={() => setEditingPlayerId(null)}
+        onSaved={(updated) => {
+          // Update local roster display name/initials
+          setPlayers((arr) =>
+            arr.map((p) => {
+              if (String(p.id) !== String(updated.id)) return p;
+              const first = updated.first_name?.trim() ?? "";
+              const last = updated.last_name?.trim() ?? "";
+              const fullName = `${first} ${last}`.trim() || (updated.email ?? p.name);
+              const initials =
+                ((first[0] ?? "") + (last[0] ?? "")).toUpperCase() ||
+                fullName.slice(0, 2).toUpperCase();
+              return { ...p, name: fullName, initials };
+            }),
+          );
+          queryClient.invalidateQueries({ queryKey: ["players"] });
+          setEditingPlayerId(null);
+          flash();
+        }}
+      />
+
       <BottomNav active="admin" />
     </main>
+  );
+}
+
+function EditPlayerDialog({
+  playerId,
+  record,
+  loading,
+  onClose,
+  onSaved,
+}: {
+  playerId: string | null;
+  record: PlayerRecord | null;
+  loading: boolean;
+  onClose: () => void;
+  onSaved: (rec: PlayerRecord) => void;
+}) {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [handicap, setHandicap] = useState("");
+  const [gpn, setGpn] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!playerId) return;
+    setError(null);
+    setFirstName(record?.first_name ?? "");
+    setLastName(record?.last_name ?? "");
+    setEmail(record?.email ?? "");
+    setHandicap(record?.usga_handicap != null ? String(record.usga_handicap) : "");
+    setGpn(record?.game_points_needed != null ? String(record.game_points_needed) : "");
+  }, [playerId, record]);
+
+  const open = playerId !== null;
+
+  const handleSave = async () => {
+    if (!playerId) return;
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
+    if (!trimmedFirst && !trimmedLast) {
+      setError("Name is required.");
+      return;
+    }
+    if (trimmedFirst.length > 80 || trimmedLast.length > 80) {
+      setError("Name must be 80 characters or fewer.");
+      return;
+    }
+    const trimmedEmail = email.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError("Email is not valid.");
+      return;
+    }
+    const hcp = handicap.trim() === "" ? null : Number(handicap);
+    if (hcp !== null && (Number.isNaN(hcp) || hcp < -10 || hcp > 60)) {
+      setError("Handicap must be a number between -10 and 60.");
+      return;
+    }
+    const gpnNum = gpn.trim() === "" ? null : Number(gpn);
+    if (gpnNum !== null && (Number.isNaN(gpnNum) || gpnNum < 0 || gpnNum > 200)) {
+      setError("Game points needed must be a number between 0 and 200.");
+      return;
+    }
+
+    const payload: UpdatePlayerPayload = {
+      first_name: trimmedFirst,
+      last_name: trimmedLast,
+      email: trimmedEmail === "" ? null : trimmedEmail,
+      usga_handicap: hcp,
+      game_points_needed: gpnNum,
+    };
+
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await updatePlayer(playerId, payload);
+      toast.success("Player updated");
+      onSaved(updated);
+    } catch (e) {
+      const msg =
+        e instanceof ApiError
+          ? `${e.message}${e.status ? ` (${e.status})` : ""}`
+          : e instanceof Error
+            ? e.message
+            : "Failed to update player";
+      setError(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit player</DialogTitle>
+        </DialogHeader>
+        {loading && !record ? (
+          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading player…
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="First name">
+                <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputCls} maxLength={80} />
+              </Field>
+              <Field label="Last name">
+                <input value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputCls} maxLength={80} />
+              </Field>
+            </div>
+            <Field label="Email">
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} maxLength={255} />
+            </Field>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="USGA handicap">
+                <input
+                  type="number"
+                  step="0.1"
+                  value={handicap}
+                  onChange={(e) => setHandicap(e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+              <Field label="Game points needed">
+                <input
+                  type="number"
+                  step="1"
+                  value={gpn}
+                  onChange={(e) => setGpn(e.target.value)}
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+            {error && <p className="text-xs font-semibold text-destructive">{error}</p>}
+          </div>
+        )}
+        <DialogFooter>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-full bg-surface-2 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-foreground"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || (loading && !record)}
+            className="flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
