@@ -473,6 +473,39 @@ export function GameSetupsPage() {
                   <p className="mt-1.5 text-[11px] font-semibold text-destructive">{errors.payout}</p>
                 )}
               </div>
+
+              <div className="rounded-xl border border-border bg-surface-2/50 p-3">
+                <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                  Payout adjustments
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Rounding ($)" error={errors["payoutRules.roundingIncrement"]}>
+                    <input
+                      className={inputCls}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={1}
+                      value={form.roundingIncrement}
+                      onChange={(e) => setForm((f) => ({ ...f, roundingIncrement: e.target.value }))}
+                    />
+                  </Field>
+                  <Field label="Minimum payout ($)" error={errors["payoutRules.minimumPayout"]}>
+                    <input
+                      className={inputCls}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={1}
+                      value={form.minimumPayout}
+                      onChange={(e) => setForm((f) => ({ ...f, minimumPayout: e.target.value }))}
+                    />
+                  </Field>
+                </div>
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  Place payouts are rounded to this increment; players in paid places receive at least the minimum.
+                </p>
+              </div>
             </div>
 
             <div className="mt-4 flex items-center gap-2">
