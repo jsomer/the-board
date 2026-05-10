@@ -102,11 +102,14 @@ export function AdminPage() {
 
   const [showPicker, setShowPicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
 
   const allPlayersQ = useQuery({
     queryKey: ["players", "all"],
     queryFn: listPlayers,
-    enabled: isAdmin && showPicker,
+    enabled: isAdmin && (showPicker || editingPlayerId !== null),
     staleTime: 60_000,
   });
 
