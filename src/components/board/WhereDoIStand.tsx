@@ -38,7 +38,7 @@ export function WhereDoIStand({
     const fromLeaders = skinRowsFromHoleLeaders(rawEvent);
     if (fromLeaders.length > 0) return fromLeaders;
     const fromApi = skinRowsFromState(skinsState);
-    return fromApi.length > 0 ? fromApi : FALLBACK_SKINS;
+    return fromApi;
   }, [rawEvent, skinsState]);
 
   // ── Live skin lead on the current hole ─────────────────────
