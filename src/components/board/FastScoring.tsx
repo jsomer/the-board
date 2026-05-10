@@ -175,6 +175,24 @@ export function FastScoring() {
   const enteredCount = groupPlayers.filter((p) => scores[p.id]?.[hole] != null).length;
   const allEntered = enteredCount === groupPlayers.length && groupPlayers.length > 0;
   const openPlayer = roundOpen ? groupPlayers.find((p) => p.id === roundOpen) ?? null : null;
+  const groupStatus = activeGroup?.status ?? null;
+  const groupApproved = groupStatus === "approved";
+
+  const handleApprove = async () => {
+    if (!eventId || !activeGroup) return;
+    setApproving(true);
+    try {
+      await approveGroup(eventId, activeGroup.id);
+      toast.success("Scores approved");
+      setReviewOpen(false);
+      await groupsQ.refetch();
+      refresh();
+    } catch (e) {
+      toast.error("Failed to approve", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setApproving(false);
+    }
+  };
 
   return (
     <main className="mx-auto min-h-screen max-w-xl pb-28">
