@@ -1,4 +1,4 @@
-import type { EventRecord, SkinsState } from "@/lib/api/types";
+import type { EventRecord, HoleLeader, SkinsState } from "@/lib/api/types";
 
 export type HoleSkin = { hole: number; winner: string | null; value: number };
 
