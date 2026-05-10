@@ -12,6 +12,7 @@ import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { CreateEventDialog } from "./CreateEventDialog";
 import { GroupsManager } from "./GroupsManager";
+import { PayoutDashboard } from "./PayoutDashboard";
 import { useHoleLocks, useHoleLockActions, clearHoleAudit } from "@/lib/board/holeLocks";
 import { getMe, getStoredIsAdmin, isAuthenticated } from "@/lib/api/auth";
 
@@ -288,31 +289,35 @@ export function AdminPage() {
         )}
 
         {tab === "payouts" && (
-          <Panel title="Payouts & Skins">
-            <Field label="Skins pot $">
-              <Stepper value={skinsPot} min={0} step={5} onChange={(v) => { setSkinsPot(v); flash(); }} />
-            </Field>
-            <div className="flex items-center justify-between rounded-xl border border-border bg-surface-2/60 px-3 py-2.5">
-              <div className="text-sm font-semibold">Carry skins on tie</div>
-              <Toggle on={carry} onChange={(v) => { setCarry(v); flash(); }} />
-            </div>
+          rawEvent ? (
+            <PayoutDashboard />
+          ) : (
+            <Panel title="Payouts & Skins">
+              <Field label="Skins pot $">
+                <Stepper value={skinsPot} min={0} step={5} onChange={(v) => { setSkinsPot(v); flash(); }} />
+              </Field>
+              <div className="flex items-center justify-between rounded-xl border border-border bg-surface-2/60 px-3 py-2.5">
+                <div className="text-sm font-semibold">Carry skins on tie</div>
+                <Toggle on={carry} onChange={(v) => { setCarry(v); flash(); }} />
+              </div>
 
-            <div className="rounded-xl border border-border bg-surface p-3">
-              <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Projected payouts</div>
-              <ul className="space-y-1.5">
-                {seedTeams.map((t) => (
-                  <li key={t.id} className="flex items-center justify-between text-sm">
-                    <span className={cn("font-bold", t.name === "Eagles" ? "text-primary" : "text-bubble")}>{t.name}</span>
-                    <span className="font-tabular font-extrabold text-money">${t.projected}</span>
+              <div className="rounded-xl border border-border bg-surface p-3">
+                <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Projected payouts</div>
+                <ul className="space-y-1.5">
+                  {seedTeams.map((t) => (
+                    <li key={t.id} className="flex items-center justify-between text-sm">
+                      <span className={cn("font-bold", t.name === "Eagles" ? "text-primary" : "text-bubble")}>{t.name}</span>
+                      <span className="font-tabular font-extrabold text-money">${t.projected}</span>
+                    </li>
+                  ))}
+                  <li className="mt-1 flex items-center justify-between border-t border-border pt-2 text-sm">
+                    <span className="font-bold">Total pot</span>
+                    <span className="font-tabular font-extrabold">${totalPot}</span>
                   </li>
-                ))}
-                <li className="mt-1 flex items-center justify-between border-t border-border pt-2 text-sm">
-                  <span className="font-bold">Total pot</span>
-                  <span className="font-tabular font-extrabold">${totalPot}</span>
-                </li>
-              </ul>
-            </div>
-          </Panel>
+                </ul>
+              </div>
+            </Panel>
+          )
         )}
 
         {tab === "locks" && (() => {
