@@ -211,39 +211,25 @@ export function QuotaLeaderboardPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-2 shadow-card">
-          <div className="grid grid-cols-6 gap-1">
-            {skinResults.map((s) => {
-              const player = s.winner ? seedPlayers.find((p) => p.id === s.winner) : null;
-              return (
-                <div
-                  key={s.hole}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-center",
-                    player
-                      ? "bg-gold/10 ring-1 ring-gold/20"
-                      : "bg-surface-2/40 ring-1 ring-border",
-                  )}
-                >
-                  <span className="font-tabular text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                    H{s.hole}
-                  </span>
-                  {player ? (
-                    <span className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-md text-[10px] font-extrabold",
-                      player.team === "Eagles" ? "bg-primary/20 text-primary" : "bg-bubble/20 text-bubble",
-                    )}>
-                      {player.initials}
+          {skinWinners.length === 0 ? (
+            <div className="px-3 py-4 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              No skins won yet
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {skinWinners
+                .slice()
+                .sort((a, b) => a.hole - b.hole)
+                .map((s) => (
+                  <li key={s.hole} className="flex items-center gap-2 px-2 py-1.5">
+                    <span className="font-tabular w-10 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      H{s.hole}
                     </span>
-                  ) : (
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-surface text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                      —
-                    </span>
-                  )}
-                  <span className="font-tabular text-[9px] font-bold text-gold">${s.value}</span>
-                </div>
-              );
-            })}
-          </div>
+                    <span className="flex-1 truncate text-sm font-bold">{s.player.name}</span>
+                  </li>
+                ))}
+            </ul>
+          )}
         </div>
 
         {/* Skins totals per player */}
