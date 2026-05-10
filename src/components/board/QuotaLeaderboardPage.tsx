@@ -279,3 +279,14 @@ function fmtToPar(n: number) {
   if (n === 0) return "E";
   return n > 0 ? `+${n}` : `${n}`;
 }
+
+function scoreToParLabel(score: number | null | undefined, par: number | null | undefined): string | null {
+  if (score == null || par == null) return null;
+  const d = score - par;
+  if (d <= -3) return "Albatross";
+  if (d === -2) return "Eagle";
+  if (d === -1) return "Birdie";
+  if (d === 0) return "Par";
+  if (d === 1) return "Bogey";
+  return `+${d}`;
+}
