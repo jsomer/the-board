@@ -1,5 +1,5 @@
 import { api, setTokens, clearTokens, getAccessToken } from "./client";
-import type { AuthTokens, MeResponse } from "./types";
+import type { AuthTokens, EventJoinInfo, EventJoinResult, MeResponse } from "./types";
 
 const ADMIN_KEY = "gt_isAdmin";
 
@@ -33,6 +33,30 @@ export async function login(email: string, password: string): Promise<AuthTokens
 export function logout() {
   clearTokens();
   setStoredIsAdmin(false);
+  if (typeof window !== "undefined") window.localStorage.removeItem("gt_player_id");
+}
+
+// ── Event-code join (no account required) ────────────────────────────────────
+
+export function getEventByCode(eventCode: string): Promise<EventJoinInfo> {
+  return api<EventJoinInfo>(`/auth/event/${encodeURIComponent(eventCode.toUpperCase())}`, { auth: false });
+}
+
+export async function eventJoin(eventCode: string, playerId: number): Promise<EventJoinResult> {
+  const result = await api<EventJoinResult>("/auth/event-join", {
+    method: "POST",
+    body: { eventCode: eventCode.toUpperCase(), playerId },
+    auth: false,
+  });
+  // Store access token only — no refresh token for player-scoped sessions
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("gt_accessToken", result.accessToken);
+    window.localStorage.removeItem("gt_refreshToken");
+    window.localStorage.setItem("gt_player_id", String(result.player.id));
+    window.localStorage.setItem("activeEventId", String(result.event_id));
+  }
+  setStoredIsAdmin(false);
+  return result;
 }
 
 export function isAuthenticated() {

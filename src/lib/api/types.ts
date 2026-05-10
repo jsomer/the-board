@@ -211,3 +211,18 @@ export interface AuthTokens {
   isAdmin?: boolean;
   user?: { id?: number; email?: string; isAdmin?: boolean } | null;
 }
+
+export interface EventJoinInfo {
+  id: number;
+  event_code: string;
+  event_date: string | null;
+  scoring_type: ScoringType;
+  status: EventStatus;
+  players: Array<{ player_id: number; name: string }>;
+}
+
+export interface EventJoinResult {
+  accessToken: string;
+  player: { id: number; name: string };
+  event_id: number;
+}

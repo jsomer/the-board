@@ -18,13 +18,13 @@ function readActiveEventId(): number | null {
  * Guard for any route that requires both an authenticated session AND a
  * currently-selected event. Throws a redirect when either is missing.
  *
- * - Not authed → /login
+ * - Not authed → /join
  * - Authed, no event → /events (picker)
  */
 export function requireAuthAndEvent() {
   if (typeof window === "undefined") return; // skip during SSR
   if (!isAuthenticated()) {
-    throw redirect({ to: "/login" });
+    throw redirect({ to: "/join" });
   }
   if (readActiveEventId() == null) {
     throw redirect({ to: "/events" });
@@ -35,6 +35,6 @@ export function requireAuthAndEvent() {
 export function requireAuth() {
   if (typeof window === "undefined") return;
   if (!isAuthenticated()) {
-    throw redirect({ to: "/login" });
+    throw redirect({ to: "/join" });
   }
 }
