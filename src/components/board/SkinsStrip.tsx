@@ -1,88 +1,84 @@
-import { Coins } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Flame } from "lucide-react";
+import { useMemo } from "react";
 import { useBoardData } from "@/lib/board/context";
-import type { HoleLeader } from "@/lib/api/types";
+import { skinRowsFromHoleLeaders, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 
-type Status = "unplayed" | "clear" | "tied";
-type Strip = { hole: number; status: Status; low: number | null; who?: string; played: number };
-
-function lastName(name: string): string {
-  return name.trim().split(/\s+/).slice(-1)[0] ?? name;
+function scoreToParLabel(score: number | null | undefined, par: number | null | undefined): string | null {
+  if (score == null || par == null) return null;
+  const d = score - par;
+  if (d <= -3) return "Albatross";
+  if (d === -2) return "Eagle";
+  if (d === -1) return "Birdie";
+  if (d === 0) return "Par";
+  if (d === 1) return "Bogey";
+  return `+${d}`;
 }
 
 export function SkinsStrip() {
-  const { rawEvent, event } = useBoardData();
+  const { rawEvent, skins } = useBoardData();
 
-  const leaders: HoleLeader[] = Array.isArray(rawEvent?.hole_leaders)
-    ? rawEvent!.hole_leaders
-    : [];
+  const skinResults: HoleSkin[] = useMemo(() => {
+    const fromLeaders = skinRowsFromHoleLeaders(rawEvent);
+    return fromLeaders.length > 0 ? fromLeaders : skinRowsFromState(skins);
+  }, [rawEvent, skins]);
 
-  const liveHole = Math.max(1, Math.min(18, event.hole || 1));
-  const start = Math.max(1, Math.min(13, liveHole - 2));
-  const holes = Array.from({ length: 6 }, (_, i) => start + i);
-
-  const strip: Strip[] = holes.map((h) => {
-    const rec = leaders.find((x) => x.hole === h);
-    if (!rec) return { hole: h, status: "unplayed", low: null, played: 0 };
-    const holder = Array.isArray(rec.holders) ? rec.holders[0] : undefined;
-    return {
-      hole: h,
-      status: rec.status,
-      low: rec.low_score,
-      who: holder ? lastName(holder.name) : undefined,
-      played: rec.played_count ?? 0,
-    };
-  });
-
-  // Count live skins across ALL 18 holes, not just the visible 6-hole window.
-  const liveSkins = leaders.filter((l) => l.status === "clear").length;
+  const winners = useMemo(
+    () => skinResults.filter((s) => s.winner).slice().sort((a, b) => a.hole - b.hole),
+    [skinResults],
+  );
 
   return (
     <section className="px-4">
       <div className="rounded-2xl border border-border bg-surface p-3 shadow-card">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-sm font-bold tracking-wide">
-            <Coins className="h-4 w-4 text-gold" />
-            Skins
+        <div className="mb-2 flex items-center gap-1.5 text-sm font-bold tracking-wide">
+          <Flame className="h-4 w-4 text-gold" />
+          Skins
+        </div>
+
+        {winners.length === 0 ? (
+          <div className="px-2 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            No skins yet
           </div>
-          <span className="text-[11px] font-semibold text-muted-foreground">
-            <span className="text-gold">{liveSkins}</span> live · target = low score to beat
-          </span>
-        </div>
-        <div className="grid grid-cols-6 gap-1.5">
-          {strip.map((s) => (
-            <div
-              key={s.hole}
-              className={cn(
-                "flex flex-col items-center gap-0.5 rounded-lg border px-1 py-1.5 text-center",
-                s.status === "clear" && "border-money/40 bg-money/10",
-                s.status === "tied" && "border-border bg-surface-2 opacity-70",
-                s.status === "unplayed" && "border-border bg-surface-2",
-              )}
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                H{s.hole}
-              </span>
-              <span
-                className={cn(
-                  "font-tabular text-sm font-extrabold",
-                  s.status === "clear" && "text-money",
-                  s.status === "tied" && "text-foreground/60 line-through",
-                  s.status === "unplayed" && "text-foreground/40",
-                )}
-              >
-                {s.low != null ? s.low : "—"}
-              </span>
-              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate max-w-full">
-                {s.status === "clear"
-                  ? s.who ?? "live"
-                  : s.status === "tied"
-                    ? "dead"
-                    : "open"}
-              </span>
-            </div>
-          ))}
-        </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {winners.map((s) => {
+              const total = s.totalPlayers ?? 0;
+              const played = s.playedCount ?? 0;
+              const left = Math.max(0, total - played);
+              const locked = total > 0 && left === 0;
+              const label = scoreToParLabel(s.score, s.par);
+              return (
+                <li key={s.hole} className="flex items-center gap-2 px-1 py-2">
+                  <span className="font-tabular w-10 shrink-0 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                    H{s.hole}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 truncate text-sm font-bold">
+                      <span className="truncate">{s.winnerName ?? "—"}</span>
+                      {label && (
+                        <span className="font-tabular rounded-md bg-gold/15 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-gold">
+                          {label}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider">
+                      {locked ? (
+                        <span className="text-money">Skin locked in</span>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {left} player{left === 1 ? "" : "s"} left to post
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="font-tabular text-sm font-extrabold text-foreground">
+                    {s.score ?? "—"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </section>
   );
