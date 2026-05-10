@@ -19,7 +19,7 @@ const DEFAULT_PARS = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 3, 5, 4];
 type Scores = Record<string, Record<number, number | undefined>>;
 
 export function FastScoring() {
-  const { players: seedPlayers, event, rawEvent, eventId } = useBoardData();
+  const { players: seedPlayers, event, rawEvent, eventId, refresh } = useBoardData();
   const PARS = (rawEvent?.hole_pars && rawEvent.hole_pars.length === 18) ? rawEvent.hole_pars : DEFAULT_PARS;
 
   const groupsQ = useQuery({
@@ -132,6 +132,10 @@ export function FastScoring() {
   };
 
   const submitNext = () => {
+    // Pull fresh hole_leaders / side-bets so the Skins strip reflects the
+    // scores just entered. The queued POSTs flush within the debounce window
+    // (~500ms); kick a refetch shortly after so the board updates immediately.
+    window.setTimeout(() => { void refresh(); }, 700);
     setHole((h) => Math.min(18, h + 1));
   };
 

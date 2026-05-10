@@ -34,7 +34,8 @@ export function SkinsStrip() {
     };
   });
 
-  const liveSkins = strip.filter((s) => s.status === "clear").length;
+  // Count live skins across ALL 18 holes, not just the visible 6-hole window.
+  const liveSkins = leaders.filter((l) => l.status === "clear").length;
 
   return (
     <section className="px-4">
