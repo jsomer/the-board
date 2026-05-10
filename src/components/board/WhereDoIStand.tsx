@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Flame, TrendingUp, TrendingDown, Zap, Trophy, AlertTriangle, ChevronDown } from "lucide-react";
 import { useBoardData } from "@/lib/board/context";
 import { useMe } from "@/hooks/useMe";
-import { skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
+import { skinRowsFromHoleLeaders, skinRowsFromState, type HoleSkin } from "@/lib/board/quotaSkins";
 import { cn } from "@/lib/utils";
 
 // Mock fallback used only when the API has not produced a SkinsState yet
