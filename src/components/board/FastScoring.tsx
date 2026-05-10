@@ -450,6 +450,7 @@ export function FastScoring() {
         approving={approving}
       />
 
+      <RoundDrawer
         open={openPlayer != null}
         onOpenChange={(o) => !o && setRoundOpen(null)}
         playerName={openPlayer?.name ?? ""}
