@@ -108,6 +108,8 @@ export interface GameSetupPayoutRulesJson {
   skinsPct?: number;
   ctpsPct?: number;
   otherPct?: number;
+  roundingIncrement?: number;
+  minimumPayout?: number;
 }
 
 export interface PointsRulesJson {

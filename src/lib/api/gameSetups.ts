@@ -48,6 +48,8 @@ const payoutRulesSchema = z
     skinsPct: z.number().min(0).max(100).optional(),
     ctpsPct: z.number().min(0).max(100).optional(),
     otherPct: z.number().min(0).max(100).optional(),
+    roundingIncrement: z.number().min(0).optional(),
+    minimumPayout: z.number().min(0).optional(),
   })
   .strict();
 
@@ -137,6 +139,8 @@ export const DEFAULT_PAYOUT_RULES: GameSetupPayoutRulesJson = {
   skinsPct: 0,
   ctpsPct: 0,
   otherPct: 0,
+  roundingIncrement: 1,
+  minimumPayout: 0,
 };
 
 export const DEFAULT_POINTS_RULES: PointsRulesJson = {

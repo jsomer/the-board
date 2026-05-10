@@ -45,6 +45,8 @@ type FormState = {
   skinsPct: string;
   ctpsPct: string;
   otherPct: string;
+  roundingIncrement: string;
+  minimumPayout: string;
 };
 
 const emptyForm: FormState = {
@@ -59,6 +61,8 @@ const emptyForm: FormState = {
   skinsPct: String(DEFAULT_PAYOUT_RULES.skinsPct ?? 0),
   ctpsPct: String(DEFAULT_PAYOUT_RULES.ctpsPct ?? 0),
   otherPct: String(DEFAULT_PAYOUT_RULES.otherPct ?? 0),
+  roundingIncrement: String(DEFAULT_PAYOUT_RULES.roundingIncrement ?? 1),
+  minimumPayout: String(DEFAULT_PAYOUT_RULES.minimumPayout ?? 0),
 };
 
 function setupToForm(s: GameSetup): FormState {
@@ -75,6 +79,8 @@ function setupToForm(s: GameSetup): FormState {
     skinsPct: String(p.skinsPct ?? 0),
     ctpsPct: String(p.ctpsPct ?? 0),
     otherPct: String(p.otherPct ?? 0),
+    roundingIncrement: String(p.roundingIncrement ?? DEFAULT_PAYOUT_RULES.roundingIncrement ?? 1),
+    minimumPayout: String(p.minimumPayout ?? DEFAULT_PAYOUT_RULES.minimumPayout ?? 0),
   };
 }
 
@@ -92,6 +98,8 @@ function formToInput(f: FormState): CreateGameSetupInput {
       skinsPct: Number(f.skinsPct),
       ctpsPct: Number(f.ctpsPct),
       otherPct: Number(f.otherPct),
+      roundingIncrement: Number(f.roundingIncrement),
+      minimumPayout: Number(f.minimumPayout),
     },
     stablefordPoints: DEFAULT_STABLEFORD_POINTS,
     pointsRules: DEFAULT_POINTS_RULES,
@@ -464,6 +472,39 @@ export function GameSetupsPage() {
                 {errors.payout && (
                   <p className="mt-1.5 text-[11px] font-semibold text-destructive">{errors.payout}</p>
                 )}
+              </div>
+
+              <div className="rounded-xl border border-border bg-surface-2/50 p-3">
+                <h3 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                  Payout adjustments
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Rounding ($)" error={errors["payoutRules.roundingIncrement"]}>
+                    <input
+                      className={inputCls}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={1}
+                      value={form.roundingIncrement}
+                      onChange={(e) => setForm((f) => ({ ...f, roundingIncrement: e.target.value }))}
+                    />
+                  </Field>
+                  <Field label="Minimum payout ($)" error={errors["payoutRules.minimumPayout"]}>
+                    <input
+                      className={inputCls}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={1}
+                      value={form.minimumPayout}
+                      onChange={(e) => setForm((f) => ({ ...f, minimumPayout: e.target.value }))}
+                    />
+                  </Field>
+                </div>
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  Place payouts are rounded to this increment; players in paid places receive at least the minimum.
+                </p>
               </div>
             </div>
 
