@@ -45,6 +45,8 @@ type FormState = {
   skinsPct: string;
   ctpsPct: string;
   otherPct: string;
+  roundingIncrement: string;
+  minimumPayout: string;
 };
 
 const emptyForm: FormState = {
@@ -59,6 +61,8 @@ const emptyForm: FormState = {
   skinsPct: String(DEFAULT_PAYOUT_RULES.skinsPct ?? 0),
   ctpsPct: String(DEFAULT_PAYOUT_RULES.ctpsPct ?? 0),
   otherPct: String(DEFAULT_PAYOUT_RULES.otherPct ?? 0),
+  roundingIncrement: String(DEFAULT_PAYOUT_RULES.roundingIncrement ?? 1),
+  minimumPayout: String(DEFAULT_PAYOUT_RULES.minimumPayout ?? 0),
 };
 
 function setupToForm(s: GameSetup): FormState {
@@ -75,6 +79,8 @@ function setupToForm(s: GameSetup): FormState {
     skinsPct: String(p.skinsPct ?? 0),
     ctpsPct: String(p.ctpsPct ?? 0),
     otherPct: String(p.otherPct ?? 0),
+    roundingIncrement: String(p.roundingIncrement ?? DEFAULT_PAYOUT_RULES.roundingIncrement ?? 1),
+    minimumPayout: String(p.minimumPayout ?? DEFAULT_PAYOUT_RULES.minimumPayout ?? 0),
   };
 }
 
@@ -92,6 +98,8 @@ function formToInput(f: FormState): CreateGameSetupInput {
       skinsPct: Number(f.skinsPct),
       ctpsPct: Number(f.ctpsPct),
       otherPct: Number(f.otherPct),
+      roundingIncrement: Number(f.roundingIncrement),
+      minimumPayout: Number(f.minimumPayout),
     },
     stablefordPoints: DEFAULT_STABLEFORD_POINTS,
     pointsRules: DEFAULT_POINTS_RULES,
