@@ -286,6 +286,42 @@ export function FastScoring() {
           </div>
         </div>
 
+        {groupStatus === "needs_review" && (
+          <div className="mb-3 flex flex-col gap-2 rounded-2xl border border-gold/40 bg-gold/10 p-3">
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gold">
+              <ListChecks className="h-3.5 w-3.5" /> Round complete · Needs review
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              All players in this group have posted 18 holes. Review the scorecard and approve to lock it in.
+            </p>
+            <button
+              type="button"
+              onClick={() => setReviewOpen(true)}
+              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] text-sm font-extrabold uppercase tracking-wider text-primary-foreground shadow-[0_8px_24px_-8px_color-mix(in_oklab,var(--primary)_60%,transparent)] active:scale-[0.98]"
+            >
+              <ListChecks className="h-4 w-4" /> Review &amp; Approve Scores
+            </button>
+          </div>
+        )}
+
+        {groupApproved && activeGroup && (
+          <div className="mb-3 flex items-center gap-2 rounded-2xl border border-money/40 bg-money/10 px-3 py-2 text-[11px] font-semibold text-money">
+            <Lock className="h-3.5 w-3.5" />
+            <div className="flex-1">
+              Scores approved
+              {activeGroup.approved_by_name ? ` by ${activeGroup.approved_by_name}` : ""}
+              {activeGroup.approved_at ? ` · ${formatApprovedAt(activeGroup.approved_at)}` : ""}
+            </div>
+            <button
+              type="button"
+              onClick={() => setReviewOpen(true)}
+              className="rounded-full bg-money/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+            >
+              View
+            </button>
+          </div>
+        )}
+
         <ul className={cn("flex flex-col gap-2", isLocked && "opacity-60")}>
           {groupPlayers.map((p) => {
             const cur = scores[p.id]?.[hole];
