@@ -97,13 +97,39 @@ export function AdminPage() {
     flash();
   };
 
-  const addPlayer = () => {
-    const n = players.length + 1;
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+
+  const allPlayersQ = useQuery({
+    queryKey: ["players", "all"],
+    queryFn: listPlayers,
+    enabled: isAdmin && showPicker,
+    staleTime: 60_000,
+  });
+
+  const existingIds = useMemo(() => new Set(players.map((p) => String(p.id))), [players]);
+  const availablePlayers = useMemo(() => {
+    const list = allPlayersQ.data ?? [];
+    const q = pickerSearch.trim().toLowerCase();
+    return list
+      .filter((p) => !existingIds.has(String(p.id)))
+      .filter((p) => {
+        if (!q) return true;
+        const full = `${p.first_name ?? ""} ${p.last_name ?? ""}`.toLowerCase();
+        return full.includes(q) || (p.email ?? "").toLowerCase().includes(q);
+      });
+  }, [allPlayersQ.data, existingIds, pickerSearch]);
+
+  const addPlayerFromRecord = (rec: PlayerRecord) => {
+    const first = rec.first_name?.trim() ?? "";
+    const last = rec.last_name?.trim() ?? "";
+    const fullName = `${first} ${last}`.trim() || (rec.email ?? `Player ${rec.id}`);
+    const initials = ((first[0] ?? "") + (last[0] ?? "")).toUpperCase() || fullName.slice(0, 2).toUpperCase();
     const fresh: Player = {
-      id: `p${Date.now()}`,
-      name: `New Player ${n}`,
-      initials: `P${n}`,
-      team: n % 2 === 0 ? "Hawks" : "Eagles",
+      id: String(rec.id),
+      name: fullName,
+      initials,
+      team: players.length % 2 === 0 ? "Eagles" : "Hawks",
       thru: 0,
       toPar: 0,
       trend: "flat",
@@ -112,6 +138,8 @@ export function AdminPage() {
       skins: 0,
     };
     setPlayers((arr) => [...arr, fresh]);
+    setShowPicker(false);
+    setPickerSearch("");
     flash();
   };
 
