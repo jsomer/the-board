@@ -10,6 +10,22 @@ export interface EventPlayer {
   achieved: number;
   adjustment: number;
   holeScores: number[]; // length 18; 0 = unscored
+  thru: number;         // holes with a score > 0; computed by API
+  round_complete: boolean; // true when thru === 18
+}
+
+export type GroupStatus = "scoring" | "needs_review" | "approved";
+
+export interface EventGroup {
+  id: number;
+  event_id: number;
+  name: string;
+  start_hole: number | null;
+  status: GroupStatus;
+  approved_at: string | null;
+  approved_by_player_id: number | null;
+  approved_by_name: string | null;
+  members: Array<{ player_id: number; name: string }>;
 }
 
 export interface HoleLeader {

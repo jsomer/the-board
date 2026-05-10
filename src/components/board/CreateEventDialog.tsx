@@ -146,6 +146,8 @@ export function CreateEventDialog({ open, onOpenChange }: Props) {
             winnings: 0,
             adjustment: 0,
             holeScores: [],
+            thru: 0,
+            round_complete: false,
           } as EventPlayer;
         });
       return updateEvent(createdEvent.id, {

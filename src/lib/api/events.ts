@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { EventRecord, SideBet } from "./types";
+import type { EventRecord, EventGroup, SideBet } from "./types";
 
 // Defensively unwrap an API response that may be an array, or an object
 // wrapping an array under a common key (data/items/results/<key>).
@@ -81,5 +81,16 @@ export function unlockHoleRequest(eventId: number | string, hole: number) {
   return api<{ locked_holes: number[] }>(`/events/${eventId}/holes/${hole}/unlock`, {
     method: "POST",
   });
+}
+
+export function approveGroup(eventId: number | string, groupId: number | string) {
+  return api<EventGroup>(`/events/${eventId}/groups/${groupId}/approve`, {
+    method: "POST",
+  });
+}
+
+export async function listGroups(eventId: number | string): Promise<EventGroup[]> {
+  const raw = await api<unknown>(`/events/${eventId}/groups`);
+  return (Array.isArray(raw) ? raw : []) as EventGroup[];
 }
 
