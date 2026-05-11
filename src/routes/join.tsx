@@ -16,7 +16,10 @@ type Step = "code" | "player" | "admin";
 function JoinPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("code");
-  const [eventCode, setEventCode] = useState("");
+  const [eventCode, setEventCode] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem("gt_lastEventCode") ?? "";
+  });
   const [eventInfo, setEventInfo] = useState<EventJoinInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +44,9 @@ function JoinPage() {
     setError(null);
     try {
       const info = await getEventByCode(code);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("gt_lastEventCode", code);
+      }
       setEventInfo(info);
       setStep("player");
     } catch (err) {
