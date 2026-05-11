@@ -63,7 +63,8 @@ function JoinPage() {
     setError(null);
     try {
       await eventJoin(eventInfo.event_code, playerId);
-      window.location.href = "/";
+      // Players go straight to their scoring sheet; admins use the event picker.
+      window.location.href = "/score";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not join event");
       setBusy(false);
