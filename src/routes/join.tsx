@@ -44,6 +44,9 @@ function JoinPage() {
     setError(null);
     try {
       const info = await getEventByCode(code);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("gt_lastEventCode", code);
+      }
       setEventInfo(info);
       setStep("player");
     } catch (err) {
