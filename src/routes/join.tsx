@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
-import { getEventByCode, eventJoin, login } from "@/lib/api/auth";
+import { useEffect, useState, type FormEvent } from "react";
+import { getEventByCode, eventJoin, login, isAuthenticated } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/client";
 import type { EventJoinInfo } from "@/lib/api/types";
 
 export const Route = createFileRoute("/join")({
@@ -19,15 +20,23 @@ function JoinPage() {
   const [eventInfo, setEventInfo] = useState<EventJoinInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectingPlayerId, setSelectingPlayerId] = useState<number | null>(null);
 
   // Admin login fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // If already authenticated, get out of here.
+  useEffect(() => {
+    if (isAuthenticated()) {
+      window.location.href = "/";
+    }
+  }, []);
+
   const onCodeSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const code = eventCode.trim().toUpperCase();
-    if (!code) return;
+    if (code.length !== 6) return;
     setBusy(true);
     setError(null);
     try {
@@ -35,7 +44,13 @@ function JoinPage() {
       setEventInfo(info);
       setStep("player");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Event not found");
+      if (err instanceof ApiError) {
+        if (err.status === 404) setError("Event not found — check the code and try again");
+        else if (err.status === 410) setError("This event has already been finalized");
+        else setError(err.message || "Something went wrong");
+      } else {
+        setError("Couldn't reach the server — check your connection");
+      }
     } finally {
       setBusy(false);
     }
@@ -44,6 +59,7 @@ function JoinPage() {
   const onSelectPlayer = async (playerId: number) => {
     if (!eventInfo) return;
     setBusy(true);
+    setSelectingPlayerId(playerId);
     setError(null);
     try {
       await eventJoin(eventInfo.event_code, playerId);
@@ -51,6 +67,7 @@ function JoinPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not join event");
       setBusy(false);
+      setSelectingPlayerId(null);
     }
   };
 
@@ -63,9 +80,14 @@ function JoinPage() {
       window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed");
-    } finally {
       setBusy(false);
     }
+  };
+
+  const goBackToCode = () => {
+    setStep("code");
+    setEventInfo(null);
+    setError(null);
   };
 
   return (
@@ -75,7 +97,7 @@ function JoinPage() {
       </header>
 
       {step === "code" && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in duration-200">
           <form
             onSubmit={onCodeSubmit}
             className="space-y-3 rounded-2xl border border-border bg-surface p-4 shadow-card"
@@ -87,20 +109,22 @@ function JoinPage() {
               autoFocus
               autoCapitalize="characters"
               autoCorrect="off"
+              spellCheck={false}
               maxLength={6}
-              placeholder="e.g. GX4R2K"
+              placeholder="GX4R2K"
               value={eventCode}
-              onChange={(e) => setEventCode(e.target.value.toUpperCase())}
-              className="w-full rounded-md border border-border bg-background px-3 py-3 text-center font-mono text-xl font-bold tracking-widest uppercase"
+              onChange={(e) => setEventCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+              className="w-full rounded-md border border-border bg-background px-3 py-3 text-center font-mono text-xl font-bold tracking-[0.4em] uppercase placeholder:text-muted-foreground/40"
             />
             {error && (
               <p className="rounded-md bg-down/10 px-3 py-2 text-xs font-semibold text-down">{error}</p>
             )}
             <button
               type="submit"
-              disabled={busy || eventCode.trim().length < 6}
-              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+              disabled={busy || eventCode.trim().length !== 6}
+              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
+              {busy && <Spinner />}
               {busy ? "Looking up…" : "Find Event"}
             </button>
           </form>
@@ -117,7 +141,7 @@ function JoinPage() {
       )}
 
       {step === "player" && eventInfo && (
-        <div className="space-y-3 rounded-2xl border border-border bg-surface p-4 shadow-card">
+        <div className="space-y-3 rounded-2xl border border-border bg-surface p-4 shadow-card animate-in fade-in slide-in-from-right-2 duration-200">
           <div className="text-center space-y-0.5">
             <p className="font-mono text-lg font-extrabold tracking-widest">{eventInfo.event_code}</p>
             {eventInfo.event_date && (
@@ -129,25 +153,30 @@ function JoinPage() {
             )}
           </div>
           <p className="text-sm font-semibold text-center">Who are you?</p>
-          <ul className="divide-y divide-border rounded-md border border-border overflow-hidden">
-            {eventInfo.players.map((p) => (
-              <li key={p.player_id}>
-                <button
-                  onClick={() => onSelectPlayer(p.player_id)}
-                  disabled={busy}
-                  className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 disabled:opacity-50 transition-colors"
-                >
-                  {p.name}
-                </button>
-              </li>
-            ))}
+          <ul className="divide-y divide-border rounded-md border border-border overflow-hidden max-h-[60vh] overflow-y-auto">
+            {eventInfo.players.map((p) => {
+              const isSelecting = selectingPlayerId === p.player_id;
+              return (
+                <li key={p.player_id}>
+                  <button
+                    onClick={() => onSelectPlayer(p.player_id)}
+                    disabled={busy}
+                    className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 disabled:opacity-50 transition-colors inline-flex items-center justify-between"
+                  >
+                    <span>{p.name}</span>
+                    {isSelecting && <Spinner />}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
           {error && (
             <p className="rounded-md bg-down/10 px-3 py-2 text-xs font-semibold text-down">{error}</p>
           )}
           <button
-            onClick={() => { setStep("code"); setEventInfo(null); setError(null); }}
-            className="w-full text-xs font-semibold text-muted-foreground underline pt-1"
+            onClick={goBackToCode}
+            disabled={busy}
+            className="w-full text-xs font-semibold text-muted-foreground underline pt-1 disabled:opacity-50"
           >
             ← Different event
           </button>
@@ -155,7 +184,7 @@ function JoinPage() {
       )}
 
       {step === "admin" && (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-in fade-in slide-in-from-right-2 duration-200">
           <form
             onSubmit={onAdminLogin}
             className="space-y-3 rounded-2xl border border-border bg-surface p-4 shadow-card"
@@ -189,14 +218,15 @@ function JoinPage() {
             <button
               type="submit"
               disabled={busy}
-              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
+              {busy && <Spinner />}
               {busy ? "Signing in…" : "Sign in"}
             </button>
           </form>
           <div className="text-center">
             <button
-              onClick={() => { setStep("code"); setError(null); }}
+              onClick={goBackToCode}
               className="text-xs font-semibold text-muted-foreground underline"
             >
               ← Back to event code
@@ -205,5 +235,14 @@ function JoinPage() {
         </div>
       )}
     </main>
+  );
+}
+
+function Spinner() {
+  return (
+    <span
+      aria-hidden
+      className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+    />
   );
 }
