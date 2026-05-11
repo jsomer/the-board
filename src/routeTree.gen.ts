@@ -14,6 +14,7 @@ import { Route as MyEventsRouteImport } from './routes/my-events'
 import { Route as MatchupsRouteImport } from './routes/matchups'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -43,6 +44,11 @@ const LoginRoute = LoginRouteImport.update({
 const LeaderboardRoute = LeaderboardRouteImport.update({
   id: '/leaderboard',
   path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventsRoute = EventsRouteImport.update({
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/events': typeof EventsRoute
+  '/join': typeof JoinRoute
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
   '/matchups': typeof MatchupsRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/events': typeof EventsRoute
+  '/join': typeof JoinRoute
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
   '/matchups': typeof MatchupsRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/events': typeof EventsRoute
+  '/join': typeof JoinRoute
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
   '/matchups': typeof MatchupsRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/events'
+    | '/join'
     | '/leaderboard'
     | '/login'
     | '/matchups'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/events'
+    | '/join'
     | '/leaderboard'
     | '/login'
     | '/matchups'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/events'
+    | '/join'
     | '/leaderboard'
     | '/login'
     | '/matchups'
@@ -151,6 +163,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   EventsRoute: typeof EventsRoute
+  JoinRoute: typeof JoinRoute
   LeaderboardRoute: typeof LeaderboardRoute
   LoginRoute: typeof LoginRoute
   MatchupsRoute: typeof MatchupsRoute
@@ -197,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events': {
       id: '/events'
       path: '/events'
@@ -239,6 +259,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   EventsRoute: EventsRoute,
+  JoinRoute: JoinRoute,
   LeaderboardRoute: LeaderboardRoute,
   LoginRoute: LoginRoute,
   MatchupsRoute: MatchupsRoute,
