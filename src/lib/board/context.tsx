@@ -158,7 +158,7 @@ export function BoardDataProvider({ children }: { children: ReactNode }) {
     apiLogout();
     setAuthed(false);
     if (typeof window !== "undefined") {
-      window.location.href = "/login";
+      window.location.href = "/join";
     }
   };
 
