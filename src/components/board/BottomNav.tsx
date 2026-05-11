@@ -2,17 +2,22 @@ import { Trophy, Zap, Swords, Target, Settings2, LogOut } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { useBoardData } from "@/lib/board/context";
+import { useMe } from "@/hooks/useMe";
+import { getStoredIsAdmin } from "@/lib/api/auth";
 
-const ITEMS = [
+const BASE_ITEMS = [
   { key: "board",    label: "Board",    icon: Trophy,     to: "/" as const },
   { key: "score",    label: "Score",    icon: Zap,        to: "/score" as const },
   { key: "matchups", label: "Matchups", icon: Swords,     to: "/matchups" as const },
   { key: "cards",    label: "Quota",    icon: Target,     to: "/leaderboard" as const },
-  { key: "admin",    label: "Admin",    icon: Settings2,  to: "/admin" as const },
 ];
+const ADMIN_ITEM = { key: "admin", label: "Admin", icon: Settings2, to: "/admin" as const };
 
 export function BottomNav({ active = "board" }: { active?: string }) {
   const { logout, authed } = useBoardData();
+  const { isAdmin } = useMe();
+  const showAdmin = isAdmin || getStoredIsAdmin();
+  const ITEMS = showAdmin ? [...BASE_ITEMS, ADMIN_ITEM] : BASE_ITEMS;
 
   const handleLogout = () => {
     if (window.confirm("Sign out of The Board?")) logout();
