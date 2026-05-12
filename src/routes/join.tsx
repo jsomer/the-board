@@ -128,7 +128,7 @@ function JoinPage() {
             <button
               type="submit"
               disabled={busy || eventCode.trim().length === 0}
-              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              className="w-full h-12 rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50 inline-flex items-center justify-center gap-2 transition-transform active:scale-[0.98] touch-manipulation"
             >
               {busy && <Spinner />}
               {busy ? "Looking up…" : "Find Event"}
@@ -167,7 +167,7 @@ function JoinPage() {
                   <button
                     onClick={() => onSelectPlayer(p.player_id)}
                     disabled={busy}
-                    className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 disabled:opacity-50 transition-colors inline-flex items-center justify-between"
+                    className="w-full px-4 py-4 text-left text-sm font-medium hover:bg-primary/10 active:bg-primary/20 active:scale-[0.98] disabled:opacity-50 transition-all inline-flex items-center justify-between touch-manipulation"
                   >
                     <span>{p.name}</span>
                     {isSelecting && <Spinner />}
@@ -224,7 +224,7 @@ function JoinPage() {
             <button
               type="submit"
               disabled={busy}
-              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              className="w-full h-12 rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50 inline-flex items-center justify-center gap-2 transition-transform active:scale-[0.98] touch-manipulation"
             >
               {busy && <Spinner />}
               {busy ? "Signing in…" : "Sign in"}
