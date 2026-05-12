@@ -16,10 +16,14 @@ type Step = "code" | "player" | "admin";
 function JoinPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("code");
-  const [eventCode, setEventCode] = useState(() => {
-    if (typeof window === "undefined") return "";
-    return window.localStorage.getItem("gt_lastEventCode") ?? "";
-  });
+  const [eventCode, setEventCode] = useState("");
+
+  useEffect(() => {
+    const last = window.localStorage.getItem("gt_lastEventCode");
+    if (last) {
+      setEventCode(last);
+    }
+  }, []);
   const [eventInfo, setEventInfo] = useState<EventJoinInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

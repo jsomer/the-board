@@ -82,8 +82,9 @@ function subscribeAudit(cb: () => void) {
 function getAuditSnapshot() {
   return auditCache;
 }
+const EMPTY_AUDIT: HoleAuditEntry[] = [];
 function getAuditServerSnapshot(): HoleAuditEntry[] {
-  return [];
+  return EMPTY_AUDIT;
 }
 
 export function useHoleLockAudit(): HoleAuditEntry[] {
