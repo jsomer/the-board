@@ -167,17 +167,12 @@ export function useHoleScoreSync(
     const results = await Promise.all(
       ready.map(async ([key, entry]) => {
         try {
-          const groupId = resolveGroupId?.(entry.playerId);
           const payload = {
             playerId: entry.playerId,
             holeNumber: entry.holeNumber,
             grossScore: entry.grossScore,
           };
-          if (groupId != null) {
-            await postGroupHoleScore(eventId, groupId, payload);
-          } else {
-            await postHoleScore(eventId, payload);
-          }
+          await postHoleScore(eventId, payload);
           return { key, ok: true as const };
         } catch (err) {
           return { key, ok: false as const, err, entry };
