@@ -70,7 +70,16 @@ export function FastScoring() {
   }, [rawEvent, seedPlayers, PARS, localScores]);
 
   const { meId, isAdmin } = useMe();
-  const [hole, setHole] = useState(event.hole);
+  const [hole, setHole] = useState(Math.max(1, event.hole));
+  const [hasSyncedHole, setHasSyncedHole] = useState(false);
+
+  // Jump to the active hole once the real event data loads
+  useEffect(() => {
+    if (rawEvent && !hasSyncedHole) {
+      setHole(Math.max(1, event.hole));
+      setHasSyncedHole(true);
+    }
+  }, [rawEvent, event.hole, hasSyncedHole]);
   const [savedFlash, setSavedFlash] = useState(false);
   const [lastEntry, setLastEntry] = useState<{ pid: string; hole: number; prev?: number } | null>(null);
   const [roundOpen, setRoundOpen] = useState<string | null>(null);
