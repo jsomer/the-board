@@ -78,19 +78,3 @@ export function removeGroupMember(
   );
 }
 
-export interface GroupHoleScorePayload {
-  playerId: number;
-  holeNumber: number;
-  grossScore: number;
-}
-
-export function postGroupHoleScore(
-  eventId: number | string,
-  groupId: number | string,
-  payload: GroupHoleScorePayload,
-) {
-  return api<unknown>(`/events/${eventId}/groups/${groupId}/score`, {
-    method: "POST",
-    body: payload,
-  });
-}
