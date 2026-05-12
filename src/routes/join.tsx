@@ -39,7 +39,7 @@ function JoinPage() {
   const onCodeSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const code = eventCode.trim().toUpperCase();
-    if (code.length !== 6) return;
+    if (code.length === 0) return;
     setBusy(true);
     setError(null);
     try {
