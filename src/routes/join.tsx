@@ -39,7 +39,7 @@ function JoinPage() {
   const onCodeSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const code = eventCode.trim().toUpperCase();
-    if (code.length !== 6) return;
+    if (code.length === 0) return;
     setBusy(true);
     setError(null);
     try {
@@ -117,7 +117,6 @@ function JoinPage() {
               autoCapitalize="characters"
               autoCorrect="off"
               spellCheck={false}
-              maxLength={6}
               placeholder="GX4R2K"
               value={eventCode}
               onChange={(e) => setEventCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
@@ -128,7 +127,7 @@ function JoinPage() {
             )}
             <button
               type="submit"
-              disabled={busy || eventCode.trim().length !== 6}
+              disabled={busy || eventCode.trim().length === 0}
               className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50 inline-flex items-center justify-center gap-2"
             >
               {busy && <Spinner />}
