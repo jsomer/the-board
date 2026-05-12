@@ -193,7 +193,14 @@ export function useHoleScoreSync(eventId: number | null) {
         revertCache(qc, eventId, e.playerId, e.holeNumber, e.prevScore);
         queueRef.current.delete(r.key);
         permanentFailure = true;
-        const msg = err.status === 403 ? "You can only score your own player" : `Save failed (${err.status})`;
+        
+        let msg = err.message;
+        if (err.status === 403 && (!msg || msg === "Forbidden" || msg.startsWith("HTTP "))) {
+          msg = "You can only score your own player";
+        } else if (!msg || msg === "Conflict" || msg.startsWith("HTTP ")) {
+          msg = `Save failed (${err.status})`;
+        }
+        
         toast.error(msg);
         continue;
       }
