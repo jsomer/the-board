@@ -107,6 +107,7 @@ export function useHoleScoreSync(eventId: number | null) {
   // Online/offline listeners
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) setOnline(false);
     const goOnline = () => {
       setOnline(true);
       toast.success("Back online — syncing scores");
