@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { postHoleScore } from "@/lib/api/events";
-import { postGroupHoleScore } from "@/lib/api/groups";
 import { ApiError } from "@/lib/api/client";
 import type { EventRecord } from "@/lib/api/types";
 
@@ -74,10 +73,7 @@ function persistQueue(eventId: number, q: Map<string, PendingEntry>) {
   }
 }
 
-export function useHoleScoreSync(
-  eventId: number | null,
-  resolveGroupId?: (playerId: number) => number | null | undefined,
-) {
+export function useHoleScoreSync(eventId: number | null) {
   const qc = useQueryClient();
   // Persistent queue keyed by `${playerId}:${hole}`
   const queueRef = useRef<Map<string, PendingEntry>>(new Map());
@@ -167,17 +163,12 @@ export function useHoleScoreSync(
     const results = await Promise.all(
       ready.map(async ([key, entry]) => {
         try {
-          const groupId = resolveGroupId?.(entry.playerId);
           const payload = {
             playerId: entry.playerId,
             holeNumber: entry.holeNumber,
             grossScore: entry.grossScore,
           };
-          if (groupId != null) {
-            await postGroupHoleScore(eventId, groupId, payload);
-          } else {
-            await postHoleScore(eventId, payload);
-          }
+          await postHoleScore(eventId, payload);
           return { key, ok: true as const };
         } catch (err) {
           return { key, ok: false as const, err, entry };

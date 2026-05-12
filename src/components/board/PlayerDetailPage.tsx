@@ -106,10 +106,7 @@ export function PlayerDetailPage() {
     return map;
   }, [groupsQ.data]);
 
-  const { queue, clear, status, savedTick } = useHoleScoreSync(
-    eventId,
-    (pid) => playerToGroup.get(pid) ?? null,
-  );
+  const { queue, clear, status, savedTick } = useHoleScoreSync(eventId);
 
   const pars = rawEvent?.hole_pars && rawEvent.hole_pars.length === 18 ? rawEvent.hole_pars : DEFAULT_PARS;
   const skinResults = useMemo(() => skinRowsFromState(skins), [skins]);
