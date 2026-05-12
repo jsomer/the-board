@@ -224,7 +224,7 @@ function JoinPage() {
             <button
               type="submit"
               disabled={busy}
-              className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              className="w-full h-12 rounded-md bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50 inline-flex items-center justify-center gap-2 transition-transform active:scale-[0.98] touch-manipulation"
             >
               {busy && <Spinner />}
               {busy ? "Signing in…" : "Sign in"}
