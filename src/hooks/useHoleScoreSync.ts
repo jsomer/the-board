@@ -82,9 +82,7 @@ export function useHoleScoreSync(eventId: number | null) {
   const [status, setStatus] = useState<SyncStatus>("idle");
   const [savedTick, setSavedTick] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
-  const [online, setOnline] = useState<boolean>(
-    typeof navigator !== "undefined" ? navigator.onLine : true,
-  );
+  const [online, setOnline] = useState<boolean>(true);
 
   // Load queue on event change
   useEffect(() => {
@@ -109,6 +107,7 @@ export function useHoleScoreSync(eventId: number | null) {
   // Online/offline listeners
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) setOnline(false);
     const goOnline = () => {
       setOnline(true);
       toast.success("Back online — syncing scores");
