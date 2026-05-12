@@ -167,7 +167,7 @@ function JoinPage() {
                   <button
                     onClick={() => onSelectPlayer(p.player_id)}
                     disabled={busy}
-                    className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 disabled:opacity-50 transition-colors inline-flex items-center justify-between"
+                    className="w-full px-4 py-4 text-left text-sm font-medium hover:bg-primary/10 active:bg-primary/20 active:scale-[0.98] disabled:opacity-50 transition-all inline-flex items-center justify-between touch-manipulation"
                   >
                     <span>{p.name}</span>
                     {isSelecting && <Spinner />}
