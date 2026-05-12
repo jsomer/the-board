@@ -193,7 +193,7 @@ export function BoardDataProvider({ children }: { children: ReactNode }) {
       return {
         players: showMock ? mockPlayers : [],
         teams: showMock ? mockTeams : [],
-        event: showMock ? mockEvent : { ...mockEvent, name: "", eventCode: "", hole: 0 },
+        event: showMock ? mockEvent : { ...mockEvent, name: "", eventCode: "", hole: 1 },
         tickerItems: showMock ? mockTicker : [],
         rawEvent: null,
         sideBets: null,
