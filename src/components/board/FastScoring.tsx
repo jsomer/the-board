@@ -14,6 +14,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { listGroups, approveGroup, type EventGroup } from "@/lib/api/groups";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { Player } from "@/data/board";
+import { ApiError } from "@/lib/api/client";
 
 const DEFAULT_PARS = [4, 4, 3, 5, 4, 4, 3, 5, 4, 4, 5, 3, 4, 4, 4, 3, 5, 4];
 
@@ -194,7 +195,31 @@ export function FastScoring() {
       await groupsQ.refetch();
       refresh();
     } catch (e) {
-      toast.error("Failed to approve", { description: e instanceof Error ? e.message : String(e) });
+      let msg = "Failed to approve group";
+      let desc: string | undefined;
+
+      if (e instanceof ApiError) {
+        if (e.status === 400) {
+          msg = "Incomplete scorecards";
+          const body = e.body as { error?: string; incomplete?: string[] };
+          if (body?.incomplete && Array.isArray(body.incomplete)) {
+            desc = `Missing scores for: ${body.incomplete.join(", ")}`;
+          } else {
+            desc = body?.error || e.message;
+          }
+        } else if (e.status === 403) {
+          msg = "Not authorized";
+          desc = "You must be a member of this group to approve its scores.";
+        } else if (e.status === 409) {
+          msg = "Already approved";
+          desc = "This group's scores have already been approved.";
+        } else {
+          desc = e.message;
+        }
+      } else {
+        desc = e instanceof Error ? e.message : String(e);
+      }
+      toast.error(msg, { description: desc });
     } finally {
       setApproving(false);
     }
