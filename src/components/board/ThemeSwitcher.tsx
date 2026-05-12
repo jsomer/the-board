@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 export type ThemeKey = "dk" | "espn" | "apple";
 
 const THEMES: { key: ThemeKey; label: string; sub: string }[] = [
-  { key: "dk",    label: "DraftKings", sub: "Sportsbook" },
-  { key: "espn",  label: "ESPN",       sub: "Broadcast" },
-  { key: "apple", label: "Apple",      sub: "Minimal" },
+  { key: "dk",    label: "Vegas",   sub: "Sportsbook" },
+  { key: "espn",  label: "Network", sub: "Broadcast" },
+  { key: "apple", label: "Minimal", sub: "Clean" },
 ];
 
 export function ThemeSwitcher() {
