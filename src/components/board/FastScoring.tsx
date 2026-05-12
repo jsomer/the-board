@@ -38,10 +38,7 @@ export function FastScoring() {
     return map;
   }, [groupsQ.data]);
 
-  const { queue, clear, status, savedTick, pendingCount, online } = useHoleScoreSync(
-    eventId,
-    (pid) => playerToGroup.get(pid) ?? null,
-  );
+  const { queue, clear, status, savedTick, pendingCount, online } = useHoleScoreSync(eventId);
 
   // Local overlay for mock/offline mode where the queue can't write to the API.
   // Keyed by player id, then hole number.
