@@ -6,6 +6,7 @@ import { useBoardData } from "@/lib/board/context";
 import { useMe } from "@/hooks/useMe";
 import { useHoleScoreSync } from "@/hooks/useHoleScoreSync";
 import { useHoleLocks } from "@/lib/board/holeLocks";
+import { usePlayerRoundUnlocks } from "@/lib/board/playerRoundUnlocks";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
