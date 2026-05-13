@@ -417,10 +417,10 @@ export function FastScoring() {
                       <button
                         key={o.stroke}
                         onClick={() => enter(p.id, o.stroke)}
-                        disabled={isLocked}
+                        disabled={isLocked && !isUnlocked(p.id)}
                         className={cn(
                           "relative flex h-12 flex-col items-center justify-center rounded-xl border text-foreground transition-all active:scale-[0.97]",
-                          isLocked && "cursor-not-allowed",
+                          isLocked && !isUnlocked(p.id) && "cursor-not-allowed",
                           active
                             ? "border-transparent bg-gradient-to-b from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] text-primary-foreground shadow-[0_4px_14px_-6px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
                             : "border-border bg-surface hover:bg-surface-2",
