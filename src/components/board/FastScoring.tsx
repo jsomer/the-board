@@ -6,6 +6,7 @@ import { useBoardData } from "@/lib/board/context";
 import { useMe } from "@/hooks/useMe";
 import { useHoleScoreSync } from "@/hooks/useHoleScoreSync";
 import { useHoleLocks } from "@/lib/board/holeLocks";
+import { usePlayerRoundUnlocks } from "@/lib/board/playerRoundUnlocks";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "./BottomNav";
 import { ThemeSwitcher } from "./ThemeSwitcher";
@@ -87,6 +88,8 @@ export function FastScoring() {
   const [approving, setApproving] = useState(false);
 
   const { locked: lockedHoles } = useHoleLocks();
+  const unlockedPlayerIds = usePlayerRoundUnlocks(eventId);
+  const isUnlocked = (pid: string | number) => unlockedPlayerIds.includes(String(pid));
   const isLocked = lockedHoles.includes(hole);
   const par = PARS[hole - 1];
 
@@ -129,7 +132,7 @@ export function FastScoring() {
   }, [savedTick]);
 
   const enter = (pid: string, stroke: number) => {
-    if (isLocked) {
+    if (isLocked && !isUnlocked(pid)) {
       toast.error(`Hole ${hole} is locked`, { description: "Ask an admin to unlock it before editing." });
       return;
     }
@@ -414,10 +417,10 @@ export function FastScoring() {
                       <button
                         key={o.stroke}
                         onClick={() => enter(p.id, o.stroke)}
-                        disabled={isLocked}
+                        disabled={isLocked && !isUnlocked(p.id)}
                         className={cn(
                           "relative flex h-12 flex-col items-center justify-center rounded-xl border text-foreground transition-all active:scale-[0.97]",
-                          isLocked && "cursor-not-allowed",
+                          isLocked && !isUnlocked(p.id) && "cursor-not-allowed",
                           active
                             ? "border-transparent bg-gradient-to-b from-primary to-[color-mix(in_oklab,var(--primary)_70%,black)] text-primary-foreground shadow-[0_4px_14px_-6px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
                             : "border-border bg-surface hover:bg-surface-2",
