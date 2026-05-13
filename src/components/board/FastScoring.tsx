@@ -132,7 +132,7 @@ export function FastScoring() {
   }, [savedTick]);
 
   const enter = (pid: string, stroke: number) => {
-    if (isLocked) {
+    if (isLocked && !isUnlocked(pid)) {
       toast.error(`Hole ${hole} is locked`, { description: "Ask an admin to unlock it before editing." });
       return;
     }
