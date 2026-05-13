@@ -755,140 +755,123 @@ function IconBtn({ children, onClick, disabled, danger }: { children: React.Reac
   );
 }
 
-function LocksPanel({ currentHole, onChange }: { currentHole: number; onChange: () => void }) {
-  const { locked, audit } = useHoleLocks();
-  const { players } = useBoardData();
-  const { lock, unlock } = useHoleLockActions();
-  // Best-effort actor name — first player marked as "you" if any, else "Admin".
-  const actor = players.find((p) => (p as unknown as { isMe?: boolean }).isMe)?.name ?? "Admin";
+function PlayerRoundLocksPanel({ eventId, onChange }: { eventId: number; onChange: () => void }) {
+  const { rawEvent } = useBoardData();
+  const unlocked = usePlayerRoundUnlocks(eventId);
+  const groupsQ = useQuery({
+    queryKey: ["groups", eventId],
+    queryFn: () => listGroups(eventId),
+    enabled: eventId != null,
+    refetchInterval: 8000,
+  });
 
-  const toggle = async (h: number) => {
-    if (locked.includes(h)) await unlock(h, actor);
-    else await lock(h, actor);
-    onChange();
-  };
+  const players = rawEvent?.players ?? [];
 
-  const lockThrough = async (n: number) => {
-    for (let h = 1; h <= n; h++) {
-      if (!locked.includes(h)) await lock(h, actor, `Bulk lock through ${n}`);
+  // Map player_id -> group (for approved-status display)
+  const groupByPid = useMemo(() => {
+    const m = new Map<string, { name: string; status: string; approvedBy: string | null }>();
+    for (const g of groupsQ.data ?? []) {
+      for (const mem of g.members) {
+        m.set(String(mem.player_id), {
+          name: g.name,
+          status: g.status,
+          approvedBy: g.approved_by_name,
+        });
+      }
     }
+    return m;
+  }, [groupsQ.data]);
+
+  const toggle = (pid: string) => {
+    if (unlocked.includes(pid)) relockPlayer(eventId, pid);
+    else unlockPlayer(eventId, pid);
     onChange();
   };
 
-  const unlockAll = async () => {
-    for (const h of [...locked]) {
-      await unlock(h, actor, "Bulk unlock");
-    }
-    onChange();
-  };
+  if (players.length === 0) {
+    return (
+      <Panel title="Player Round Locks">
+        <p className="text-[12px] text-muted-foreground">No players in this event yet.</p>
+      </Panel>
+    );
+  }
 
   return (
-    <>
-      <Panel
-        title="Hole Locks"
-        action={
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => lockThrough(currentHole)}
-              className="rounded-full bg-bubble/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-bubble"
+    <Panel title="Player Round Locks">
+      <p className="text-[11px] text-muted-foreground">
+        A player&apos;s scorecard locks once their round is complete or their group is approved.
+        Unlock individually to allow corrections.
+      </p>
+      <ul className="space-y-1.5">
+        {players.map((p) => {
+          const pid = String(p.player_id);
+          const g = groupByPid.get(pid);
+          const groupApproved = g?.status === "approved";
+          const baseLocked = p.round_complete || groupApproved;
+          const overrideOpen = unlocked.includes(pid);
+          const effectivelyOpen = !baseLocked || overrideOpen;
+          return (
+            <li
+              key={pid}
+              className="flex items-center gap-2 rounded-xl border border-border bg-surface px-2.5 py-2"
             >
-              <Lock className="mr-1 inline h-3 w-3" /> Lock thru {currentHole}
-            </button>
-            <button
-              onClick={unlockAll}
-              disabled={locked.length === 0}
-              className="rounded-full bg-surface-2 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-foreground disabled:opacity-30"
-            >
-              <Unlock className="mr-1 inline h-3 w-3" /> Unlock all
-            </button>
-          </div>
-        }
-      >
-        <p className="text-[11px] text-muted-foreground">
-          Locked holes prevent edits in Fast Scoring. Unlock to allow corrections.
-        </p>
-        <div className="grid grid-cols-6 gap-1.5">
-          {Array.from({ length: 18 }, (_, i) => i + 1).map((h) => {
-            const isLk = locked.includes(h);
-            return (
-              <button
-                key={h}
-                onClick={() => toggle(h)}
+              <div
                 className={cn(
-                  "relative flex h-12 flex-col items-center justify-center rounded-xl border font-tabular text-sm font-extrabold transition-all",
-                  isLk
-                    ? "border-bubble/40 bg-bubble/15 text-bubble"
-                    : "border-border bg-surface text-foreground hover:bg-surface-2",
+                  "flex h-9 w-9 items-center justify-center rounded-lg text-xs font-extrabold",
+                  effectivelyOpen ? "bg-money/15 text-money" : "bg-bubble/15 text-bubble",
                 )}
               >
-                {h}
-                {isLk ? (
-                  <Lock className="mt-0.5 h-3 w-3" />
-                ) : (
-                  <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    open
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </Panel>
-
-      <Panel
-        title={
-          <span className="flex items-center gap-1.5">
-            <History className="h-3 w-3" /> Audit trail
-          </span>
-        }
-        action={
-          audit.length > 0 ? (
-            <button
-              onClick={() => { clearHoleAudit(); onChange(); }}
-              className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-down"
-            >
-              <Trash2 className="mr-1 inline h-3 w-3" /> Clear
-            </button>
-          ) : undefined
-        }
-      >
-        {audit.length === 0 ? (
-          <p className="text-[12px] text-muted-foreground">No lock activity yet.</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {audit.map((a, i) => (
-              <li
-                key={i}
-                className="flex items-center justify-between rounded-xl border border-border bg-surface px-2.5 py-2 text-[12px]"
-              >
-                <span className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      "flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-extrabold",
-                      a.action === "lock" ? "bg-bubble/15 text-bubble" : "bg-money/15 text-money",
-                    )}
-                  >
-                    {a.action === "lock" ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                  </span>
-                  <span className="font-semibold">
-                    Hole {a.hole} {a.action === "lock" ? "locked" : "unlocked"}
-                  </span>
-                  <span className="text-muted-foreground">· {a.actor}</span>
+                {effectivelyOpen ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-bold">{p.name}</div>
+                <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <span className="font-tabular">{p.thru}/18</span>
+                  {p.round_complete && (
+                    <span className="flex items-center gap-0.5 text-gold">
+                      <CheckCircle2 className="h-3 w-3" /> Round complete
+                    </span>
+                  )}
+                  {groupApproved && (
+                    <span className="text-money">
+                      · Group approved{g?.approvedBy ? ` by ${g.approvedBy}` : ""}
+                    </span>
+                  )}
+                  {overrideOpen && baseLocked && (
+                    <span className="text-primary">· Unlocked for editing</span>
+                  )}
+                </div>
+              </div>
+              {baseLocked ? (
+                <button
+                  onClick={() => toggle(pid)}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider",
+                    overrideOpen
+                      ? "bg-bubble/15 text-bubble"
+                      : "bg-primary text-primary-foreground",
+                  )}
+                >
+                  {overrideOpen ? (
+                    <>
+                      <Lock className="h-3 w-3" /> Re-lock
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="h-3 w-3" /> Unlock
+                    </>
+                  )}
+                </button>
+              ) : (
+                <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Open
                 </span>
-                <span className="font-tabular text-[10px] text-muted-foreground">{fmtTime(a.at)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
-    </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Panel>
   );
 }
 
-function fmtTime(ts: number) {
-  const d = new Date(ts);
-  const now = new Date();
-  const sameDay = d.toDateString() === now.toDateString();
-  const t = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return sameDay ? t : `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${t}`;
-}
