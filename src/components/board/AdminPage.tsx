@@ -18,7 +18,8 @@ import { ThemeSwitcher } from "./ThemeSwitcher";
 import { CreateEventDialog } from "./CreateEventDialog";
 import { GroupsManager } from "./GroupsManager";
 import { PayoutDashboard } from "./PayoutDashboard";
-import { useHoleLocks, useHoleLockActions, clearHoleAudit } from "@/lib/board/holeLocks";
+import { listGroups } from "@/lib/api/groups";
+import { usePlayerRoundUnlocks, unlockPlayer, relockPlayer } from "@/lib/board/playerRoundUnlocks";
 import { getMe, getStoredIsAdmin, isAuthenticated } from "@/lib/api/auth";
 
 type Tab = "event" | "players" | "groups" | "payouts" | "locks" | "ticker";
