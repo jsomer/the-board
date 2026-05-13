@@ -88,6 +88,8 @@ export function FastScoring() {
   const [approving, setApproving] = useState(false);
 
   const { locked: lockedHoles } = useHoleLocks();
+  const unlockedPlayerIds = usePlayerRoundUnlocks(eventId);
+  const isUnlocked = (pid: string | number) => unlockedPlayerIds.includes(String(pid));
   const isLocked = lockedHoles.includes(hole);
   const par = PARS[hole - 1];
 
