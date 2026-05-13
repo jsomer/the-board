@@ -412,13 +412,17 @@ export function AdminPage() {
           )
         )}
 
-        {tab === "locks" && (() => {
-          // Hole the whole group has finished = min(holes-played) across all players
-          const liveHole = rawEvent?.players?.length
-            ? Math.min(...rawEvent.players.map((p) => p.holeScores.filter((s) => s > 0).length))
-            : hole;
-          return <LocksPanel currentHole={liveHole} onChange={flash} />;
-        })()}
+        {tab === "locks" && (
+          eventId != null && rawEvent ? (
+            <PlayerRoundLocksPanel eventId={eventId} onChange={flash} />
+          ) : (
+            <Panel title="Player Round Locks">
+              <p className="text-[12px] text-muted-foreground">
+                No active event. Round locks appear here once an event is loaded.
+              </p>
+            </Panel>
+          )
+        )}
 
         {tab === "ticker" && (
           <Panel title="Live Ticker">
