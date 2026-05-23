@@ -19,7 +19,9 @@ import { Route as EventsRouteImport } from './routes/events'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlayerPlayerIdRouteImport } from './routes/player.$playerId'
+import { Route as AdminScorecardsRouteImport } from './routes/admin_.scorecards'
 import { Route as AdminGameSetupsRouteImport } from './routes/admin_.game-setups'
+import { Route as AdminScorecardsPlayerIdRouteImport } from './routes/admin_.scorecards.$playerId'
 
 const ScoreRoute = ScoreRouteImport.update({
   id: '/score',
@@ -71,10 +73,20 @@ const PlayerPlayerIdRoute = PlayerPlayerIdRouteImport.update({
   path: '/player/$playerId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminScorecardsRoute = AdminScorecardsRouteImport.update({
+  id: '/admin_/scorecards',
+  path: '/admin/scorecards',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminGameSetupsRoute = AdminGameSetupsRouteImport.update({
   id: '/admin_/game-setups',
   path: '/admin/game-setups',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminScorecardsPlayerIdRoute = AdminScorecardsPlayerIdRouteImport.update({
+  id: '/$playerId',
+  path: '/$playerId',
+  getParentRoute: () => AdminScorecardsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -88,7 +100,9 @@ export interface FileRoutesByFullPath {
   '/my-events': typeof MyEventsRoute
   '/score': typeof ScoreRoute
   '/admin/game-setups': typeof AdminGameSetupsRoute
+  '/admin/scorecards': typeof AdminScorecardsRouteWithChildren
   '/player/$playerId': typeof PlayerPlayerIdRoute
+  '/admin/scorecards/$playerId': typeof AdminScorecardsPlayerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -101,7 +115,9 @@ export interface FileRoutesByTo {
   '/my-events': typeof MyEventsRoute
   '/score': typeof ScoreRoute
   '/admin/game-setups': typeof AdminGameSetupsRoute
+  '/admin/scorecards': typeof AdminScorecardsRouteWithChildren
   '/player/$playerId': typeof PlayerPlayerIdRoute
+  '/admin/scorecards/$playerId': typeof AdminScorecardsPlayerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -115,7 +131,9 @@ export interface FileRoutesById {
   '/my-events': typeof MyEventsRoute
   '/score': typeof ScoreRoute
   '/admin_/game-setups': typeof AdminGameSetupsRoute
+  '/admin_/scorecards': typeof AdminScorecardsRouteWithChildren
   '/player/$playerId': typeof PlayerPlayerIdRoute
+  '/admin_/scorecards/$playerId': typeof AdminScorecardsPlayerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,7 +148,9 @@ export interface FileRouteTypes {
     | '/my-events'
     | '/score'
     | '/admin/game-setups'
+    | '/admin/scorecards'
     | '/player/$playerId'
+    | '/admin/scorecards/$playerId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -143,7 +163,9 @@ export interface FileRouteTypes {
     | '/my-events'
     | '/score'
     | '/admin/game-setups'
+    | '/admin/scorecards'
     | '/player/$playerId'
+    | '/admin/scorecards/$playerId'
   id:
     | '__root__'
     | '/'
@@ -156,7 +178,9 @@ export interface FileRouteTypes {
     | '/my-events'
     | '/score'
     | '/admin_/game-setups'
+    | '/admin_/scorecards'
     | '/player/$playerId'
+    | '/admin_/scorecards/$playerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -170,6 +194,7 @@ export interface RootRouteChildren {
   MyEventsRoute: typeof MyEventsRoute
   ScoreRoute: typeof ScoreRoute
   AdminGameSetupsRoute: typeof AdminGameSetupsRoute
+  AdminScorecardsRoute: typeof AdminScorecardsRouteWithChildren
   PlayerPlayerIdRoute: typeof PlayerPlayerIdRoute
 }
 
@@ -245,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayerPlayerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin_/scorecards': {
+      id: '/admin_/scorecards'
+      path: '/admin/scorecards'
+      fullPath: '/admin/scorecards'
+      preLoaderRoute: typeof AdminScorecardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin_/game-setups': {
       id: '/admin_/game-setups'
       path: '/admin/game-setups'
@@ -252,8 +284,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGameSetupsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin_/scorecards/$playerId': {
+      id: '/admin_/scorecards/$playerId'
+      path: '/$playerId'
+      fullPath: '/admin/scorecards/$playerId'
+      preLoaderRoute: typeof AdminScorecardsPlayerIdRouteImport
+      parentRoute: typeof AdminScorecardsRoute
+    }
   }
 }
+
+interface AdminScorecardsRouteChildren {
+  AdminScorecardsPlayerIdRoute: typeof AdminScorecardsPlayerIdRoute
+}
+
+const AdminScorecardsRouteChildren: AdminScorecardsRouteChildren = {
+  AdminScorecardsPlayerIdRoute: AdminScorecardsPlayerIdRoute,
+}
+
+const AdminScorecardsRouteWithChildren = AdminScorecardsRoute._addFileChildren(
+  AdminScorecardsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -266,6 +317,7 @@ const rootRouteChildren: RootRouteChildren = {
   MyEventsRoute: MyEventsRoute,
   ScoreRoute: ScoreRoute,
   AdminGameSetupsRoute: AdminGameSetupsRoute,
+  AdminScorecardsRoute: AdminScorecardsRouteWithChildren,
   PlayerPlayerIdRoute: PlayerPlayerIdRoute,
 }
 export const routeTree = rootRouteImport
