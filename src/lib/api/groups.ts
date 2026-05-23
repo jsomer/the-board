@@ -78,3 +78,26 @@ export function removeGroupMember(
   );
 }
 
+
+export function unapproveGroup(eventId: number | string, groupId: number | string) {
+  return api<EventGroup>(`/events/${eventId}/groups/${groupId}/unapprove`, {
+    method: "POST",
+  });
+}
+
+export interface GroupScorePayload {
+  playerId: number;
+  holeNumber: number;
+  grossScore: number;
+}
+
+export function postGroupScore(
+  eventId: number | string,
+  groupId: number | string,
+  payload: GroupScorePayload,
+) {
+  return api<{ holeNumber: number; playerId: number; grossScore: number; achieved?: number }>(
+    `/events/${eventId}/groups/${groupId}/score`,
+    { method: "POST", body: payload },
+  );
+}
