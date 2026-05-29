@@ -1,5 +1,6 @@
 import { useBoardData } from "@/lib/board/context";
 import { cn } from "@/lib/utils";
+import type { EventPlayer } from "@/lib/api/types";
 
 export function Scorecard() {
   const { rawEvent } = useBoardData();
@@ -44,11 +45,7 @@ interface NineTableProps {
   label: string;
   holes: number[];
   pars: number[];
-  players: ReturnType<typeof useBoardData>["rawEvent"] extends infer R
-    ? R extends { players: infer P }
-      ? P
-      : never
-    : never;
+  players: EventPlayer[];
   sliceStart: number;
   sliceEnd: number;
 }
